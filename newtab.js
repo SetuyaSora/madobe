@@ -88,6 +88,13 @@ let originalInputText = '';
 // ショートカットドロワー開閉制御用
 let isShortcutDialogOpen = false;
 
+// 編集モード状態用
+let isEditMode = false;
+let longPressTimer = null;
+let pressStartX = 0;
+let pressStartY = 0;
+const LONG_PRESS_DELAY = 700; // 700ms 長押しで編集モード
+
 // -------------------------------------------------------------
 // IndexedDB 制御用 (ローカル動画の永続保存用)
 // -------------------------------------------------------------
@@ -585,6 +592,27 @@ function initEventListeners() {
   elements.shortcutsDrawer.addEventListener('mouseleave', () => {
     if (!isShortcutDialogOpen) {
       closeShortcutsDrawer();
+    }
+  });
+
+  // --- 4.17. 背景クリックで編集モードを終了 ---
+  document.addEventListener('click', (e) => {
+    if (document.body.classList.contains('edit-mode')) {
+      if (!e.target.closest('.widget-frame') && 
+          !e.target.closest('#shortcuts-drawer') && 
+          !e.target.closest('#settings-panel') &&
+          !e.target.closest('#settings-toggle') &&
+          !e.target.closest('#drawer-trigger')) {
+        exitEditMode();
+      }
+    }
+  });
+
+  // マウスを離したときに長押しタイマーをクリア (グローバルmouseup)
+  document.addEventListener('mouseup', () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      longPressTimer = null;
     }
   });
 
@@ -1148,6 +1176,7 @@ function removeSnapPreview() {
 function makeWidgetDraggable(widgetFrame, widgetData) {
   const header = widgetFrame.querySelector('.widget-header');
   header.addEventListener('mousedown', (e) => {
+    if (!document.body.classList.contains('edit-mode')) return;
     if (e.target.closest('.widget-close-btn')) return;
     e.preventDefault();
 
@@ -1222,6 +1251,7 @@ function makeWidgetDraggable(widgetFrame, widgetData) {
 function makeWidgetResizable(widgetFrame, widgetData) {
   const handle = widgetFrame.querySelector('.widget-resize-handle');
   handle.addEventListener('mousedown', (e) => {
+    if (!document.body.classList.contains('edit-mode')) return;
     e.preventDefault();
     e.stopPropagation();
 
@@ -1456,6 +1486,30 @@ function renderWidgets() {
       textarea.addEventListener('blur', () => { isShortcutDialogOpen = false; closeShortcutsDrawer(); });
     }
 
+    // 長押しで編集モードに入るイベントリスナー
+    frame.addEventListener('mousedown', (e) => {
+      if (document.body.classList.contains('edit-mode')) return;
+      if (e.target.closest('.widget-close-btn') || e.target.closest('.widget-resize-handle') || e.target.closest('textarea') || e.target.closest('input')) return;
+
+      pressStartX = e.clientX;
+      pressStartY = e.clientY;
+
+      longPressTimer = setTimeout(() => {
+        enterEditMode();
+        longPressTimer = null;
+      }, LONG_PRESS_DELAY);
+    });
+
+    frame.addEventListener('mousemove', (e) => {
+      if (longPressTimer) {
+        const distance = Math.hypot(e.clientX - pressStartX, e.clientY - pressStartY);
+        if (distance > 8) { // 8px動いたらキャンセル
+          clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+      }
+    });
+
     // 移動とリサイズのバインド
     makeWidgetDraggable(frame, widget);
     makeWidgetResizable(frame, widget);
@@ -1506,4 +1560,18 @@ function initWidgetsTimer() {
   if (!widgetsGlobalTimer) {
     widgetsGlobalTimer = setInterval(updateWidgetsTime, 1000);
   }
+}
+
+// 編集モードに入る
+function enterEditMode() {
+  if (isEditMode) return;
+  isEditMode = true;
+  document.body.classList.add('edit-mode');
+}
+
+// 編集モードを終了する
+function exitEditMode() {
+  if (!isEditMode) return;
+  isEditMode = false;
+  document.body.classList.remove('edit-mode');
 }

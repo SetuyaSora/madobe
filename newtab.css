@@ -1085,30 +1085,45 @@ body.dragging-widget #widgets-layer {
   pointer-events: auto !important;
 }
 
-/* ウィジェットの個別フレーム */
+/* ウィジェットの個別フレーム (通常モード: 枠なし、背景透明) */
 .widget-frame {
   position: absolute;
   display: flex;
   flex-direction: column;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  overflow: visible; /* サジェストを枠外に出すため、通常時はvisibleで突き抜ける */
+  pointer-events: auto; /* ウィジェット内はクリック可能 */
+  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  user-select: none;
+}
+
+/* 編集モード時のウィジェット枠 (すりガラス枠出現) */
+body.edit-mode .widget-frame {
   background: rgba(15, 15, 20, 0.55);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
-  border: 1px solid var(--border-glass);
-  border-radius: 16px;
-  box-shadow: var(--shadow-main);
-  overflow: hidden;
-  pointer-events: auto; /* ウィジェット内はクリック可能 */
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  border-color: var(--border-glass);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), var(--shadow-main);
+  overflow: hidden; /* リサイズ用のつまみ制限のため、一般ウィジェットはoverflow: hidden */
+}
+
+/* 検索バーは編集モードでもサジェストのドロップダウンを表示させるため、常にoverflow: visibleを維持 */
+body.edit-mode .widget-frame.widget-type-search-bar {
+  overflow: visible !important;
 }
 
 .widget-frame:hover {
+  /* 通常時は枠ホバーを何もしない、編集モード中のみホバー線を追加 */
+}
+body.edit-mode .widget-frame:hover {
   border-color: rgba(255, 255, 255, 0.15);
 }
 
 /* ドラッグ移動中・リサイズ中 */
-.widget-frame.dragging,
-.widget-frame.resizing {
+body.edit-mode .widget-frame.dragging,
+body.edit-mode .widget-frame.resizing {
   opacity: 0.85;
   border-color: var(--accent-color);
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5), 0 0 0 2px var(--accent-glow);
@@ -1117,7 +1132,11 @@ body.dragging-widget #widgets-layer {
 
 /* ウィジェットヘッダー (ドラッグハンドル) */
 .widget-header {
-  display: flex;
+  display: none !important; /* 通常モード時は完全に非表示 */
+}
+
+body.edit-mode .widget-header {
+  display: flex !important; /* 編集モード時のみ出現 */
   align-items: center;
   justify-content: space-between;
   padding: 6px 12px;
@@ -1170,8 +1189,17 @@ body.dragging-widget #widgets-layer {
   overflow: hidden;
 }
 
+.widget-type-search-bar .widget-body {
+  overflow: visible !important; /* 検索バーボディもサジェスト表示のためvisible */
+}
+
 /* リサイズハンドル */
 .widget-resize-handle {
+  display: none !important; /* 通常モード時は完全に非表示 */
+}
+
+body.edit-mode .widget-resize-handle {
+  display: block !important; /* 編集モード時のみ出現 */
   position: absolute;
   right: 0;
   bottom: 0;
@@ -1183,8 +1211,46 @@ body.dragging-widget #widgets-layer {
   border-bottom-right-radius: 12px;
 }
 
-.widget-frame:hover .widget-resize-handle {
+body.edit-mode .widget-frame:hover .widget-resize-handle {
   background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.5) 40%, rgba(255,255,255,0.5) 60%, transparent 60%, transparent 80%, rgba(255,255,255,0.5) 80%);
+}
+
+/* iPhone風 Wiggle (プルプル震える) エフェクト */
+@keyframes wiggle {
+  0% { transform: rotate(-0.6deg) translateY(0); }
+  50% { transform: rotate(0.6deg) translateY(-0.5px); }
+  100% { transform: rotate(-0.6deg) translateY(0); }
+}
+
+@keyframes wiggle-alt {
+  0% { transform: rotate(0.6deg) translateY(-0.5px); }
+  50% { transform: rotate(-0.6deg) translateY(0); }
+  100% { transform: rotate(0.6deg) translateY(-0.5px); }
+}
+
+body.edit-mode .widget-frame {
+  animation: wiggle 0.24s ease-in-out infinite;
+}
+
+body.edit-mode .widget-frame:nth-child(even) {
+  animation-name: wiggle-alt;
+  animation-duration: 0.28s;
+}
+
+/* ドラッグ中、リサイズ中は操作ミスを防ぐためにアニメーションを一時停止 */
+body.edit-mode .widget-frame.dragging,
+body.edit-mode .widget-frame.resizing {
+  animation: none !important;
+}
+
+/* 通常表示時の文字の視認性確保のためのテキストシャドウ */
+.clock-time,
+.clock-date,
+.calendar-month-year,
+.calendar-table td,
+.calendar-table th,
+.widget-memo textarea {
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
 }
 
 /* ドラッグ時のグリッド配置スナッププレビュー枠 */
