@@ -1081,6 +1081,10 @@ select option {
   user-select: none;
 }
 
+body.dragging-widget #widgets-layer {
+  pointer-events: auto !important;
+}
+
 /* ウィジェットの個別フレーム */
 .widget-frame {
   position: absolute;

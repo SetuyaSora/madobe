@@ -564,11 +564,15 @@ function initEventListeners() {
   // --- 4.15. ウィジェット見本のドラッグ開始・終了 ---
   elements.widgetSampleCards.forEach(card => {
     card.addEventListener('dragstart', (e) => {
+      currentDraggedType = card.dataset.widgetType; // ドラッグ中のタイプを記録
       e.dataTransfer.setData('text/plain', card.dataset.widgetType);
       isShortcutDialogOpen = true; // ドラッグ中はドロワーを閉じない
+      document.body.classList.add('dragging-widget'); // ドラッグ中だけpointer-events: autoにする
     });
     card.addEventListener('dragend', () => {
+      currentDraggedType = null;
       isShortcutDialogOpen = false;
+      document.body.classList.remove('dragging-widget'); // 通常のpointer-events: noneに戻す
       closeShortcutsDrawer();
     });
   });
@@ -576,7 +580,8 @@ function initEventListeners() {
   // --- 4.16. ウィジェット配置レイヤーへのドロップ制御 ---
   elements.widgetsLayer.addEventListener('dragover', (e) => {
     e.preventDefault();
-    updateSnapPreview(e.clientX, e.clientY, getWidgetDefaultSize('digital-clock'));
+    const type = currentDraggedType || 'digital-clock';
+    updateSnapPreview(e.clientX, e.clientY, getWidgetDefaultSize(type));
   });
 
   elements.widgetsLayer.addEventListener('dragleave', () => {
@@ -1033,6 +1038,7 @@ function closeShortcutsDrawer() {
 // -------------------------------------------------------------
 let widgetsGlobalTimer = null;
 let dragPreviewEl = null;
+let currentDraggedType = null;
 
 // ウィジェットの保存
 function saveWidgets() {
