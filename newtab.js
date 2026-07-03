@@ -68,6 +68,12 @@ let editingShortcutIndex = -1;
 // ローカル動画のBlob URL一時保管用
 let localVideoBlobUrl = null;
 
+// サジェスト制御用
+let suggestDebounceTimer = null;
+let currentSuggestList = [];
+let activeSuggestIndex = -1;
+let originalInputText = '';
+
 // -------------------------------------------------------------
 // IndexedDB 制御用 (ローカル動画の永続保存用)
 // -------------------------------------------------------------
@@ -158,7 +164,12 @@ const elements = {
   shortcutNameInput: document.getElementById('shortcut-name-input'),
   shortcutUrlInput: document.getElementById('shortcut-url-input'),
   dialogCancelBtn: document.getElementById('dialog-cancel-btn'),
-  dialogSaveBtn: document.getElementById('dialog-save-btn')
+  dialogSaveBtn: document.getElementById('dialog-save-btn'),
+
+  // 検索サジェスト
+  searchForm: document.getElementById('search-form'),
+  searchInput: document.getElementById('search-input'),
+  suggestList: document.getElementById('search-suggest-list')
 };
 
 // -------------------------------------------------------------
@@ -485,6 +496,25 @@ function initEventListeners() {
       closeShortcutDialog();
     }
   });
+
+  // --- 4.12. 検索サジェストイベントの監視 ---
+  elements.searchInput.addEventListener('input', handleSearchInput);
+  elements.searchInput.addEventListener('keydown', handleSearchKeydown);
+  elements.searchInput.addEventListener('focus', () => {
+    const query = elements.searchInput.value.trim();
+    if (query) {
+      updateSuggestList(query);
+    }
+  });
+
+  // サジェストリスト以外のクリックでリストを閉じる
+  document.addEventListener('click', (e) => {
+    if (!elements.suggestList.classList.contains('hidden') && 
+        !elements.suggestList.contains(e.target) && 
+        e.target !== elements.searchInput) {
+      elements.suggestList.classList.add('hidden');
+    }
+  });
 }
 
 // -------------------------------------------------------------
@@ -621,4 +651,253 @@ function getRandomGradient(str) {
 
 function hueToRgb(h) {
   return `hsl(${h}, 70%, 45%)`;
+}
+
+// -------------------------------------------------------------
+// 6. 検索サジェスト（予測＆履歴）用関数群
+// -------------------------------------------------------------
+
+// 入力イベントハンドラー (デバウンス処理)
+function handleSearchInput(e) {
+  const query = e.target.value.trim();
+  
+  // デバウンスタイマーをリセット
+  clearTimeout(suggestDebounceTimer);
+  
+  if (!query) {
+    elements.suggestList.innerHTML = '';
+    elements.suggestList.classList.add('hidden');
+    activeSuggestIndex = -1;
+    return;
+  }
+  
+  // 150ms待ってからサジェストを更新
+  suggestDebounceTimer = setTimeout(() => {
+    updateSuggestList(query);
+  }, 150);
+}
+
+// キーダウンイベントハンドラー (上下キーでの選択制御)
+function handleSearchKeydown(e) {
+  if (elements.suggestList.classList.contains('hidden') || currentSuggestList.length === 0) {
+    return;
+  }
+
+  const maxIndex = currentSuggestList.length - 1;
+
+  if (e.key === 'ArrowDown') {
+    e.preventDefault();
+    if (activeSuggestIndex === -1) {
+      originalInputText = elements.searchInput.value;
+    }
+    
+    activeSuggestIndex++;
+    if (activeSuggestIndex > maxIndex) {
+      activeSuggestIndex = -1; // 元の入力テキストに戻る
+    }
+    
+    updateActiveSuggestItem();
+  } 
+  else if (e.key === 'ArrowUp') {
+    e.preventDefault();
+    if (activeSuggestIndex === -1) {
+      originalInputText = elements.searchInput.value;
+      activeSuggestIndex = maxIndex;
+    } else {
+      activeSuggestIndex--;
+    }
+    
+    updateActiveSuggestItem();
+  } 
+  else if (e.key === 'Escape') {
+    elements.suggestList.classList.add('hidden');
+    activeSuggestIndex = -1;
+  } 
+  else if (e.key === 'Enter') {
+    if (activeSuggestIndex >= 0) {
+      const selectedItem = currentSuggestList[activeSuggestIndex];
+      if (selectedItem.type === 'history') {
+        e.preventDefault();
+        window.location.href = selectedItem.url; // 履歴なら直接遷移
+      }
+      // queryタイプならそのままformのsubmitが走りGoogle検索される
+    }
+  }
+}
+
+// サジェスト項目ハイライトの更新とテキスト入力欄への反映
+function updateActiveSuggestItem() {
+  const items = elements.suggestList.querySelectorAll('.suggest-item');
+  items.forEach((item, idx) => {
+    if (idx === activeSuggestIndex) {
+      item.classList.add('active');
+      // キーボード選択したテキストを入力欄に反映
+      elements.searchInput.value = currentSuggestList[idx].text;
+      
+      // スクロール追従 (項目が多い場合)
+      item.scrollIntoView({ block: 'nearest' });
+    } else {
+      item.classList.remove('active');
+    }
+  });
+
+  if (activeSuggestIndex === -1) {
+    // 選択なし（元の入力値に戻す）
+    elements.searchInput.value = originalInputText;
+  }
+}
+
+// サジェストリストの取得と描画
+function updateSuggestList(query) {
+  Promise.all([
+    fetchHistorySuggests(query),
+    fetchGoogleSuggests(query)
+  ]).then(([historyItems, googleItems]) => {
+    // 統合と重複排除 (同じクエリ文字列がある場合は履歴を優先)
+    const merged = [];
+    const seenTexts = new Set();
+
+    // 1. まず履歴を追加 (最大5件)
+    historyItems.forEach(item => {
+      const normalized = item.text.toLowerCase().trim();
+      if (!seenTexts.has(normalized)) {
+        seenTexts.add(normalized);
+        merged.push(item);
+      }
+    });
+
+    // 2. 次にGoogle検索予測を追加
+    googleItems.forEach(item => {
+      const normalized = item.text.toLowerCase().trim();
+      if (!seenTexts.has(normalized)) {
+        seenTexts.add(normalized);
+        merged.push(item);
+      }
+    });
+
+    // 最大8件に絞る
+    currentSuggestList = merged.slice(0, 8);
+    activeSuggestIndex = -1;
+
+    renderSuggestItems();
+  }).catch(err => {
+    console.error("サジェストデータの統合エラー:", err);
+  });
+}
+
+// サジェストのDOM描画
+function renderSuggestItems() {
+  elements.suggestList.innerHTML = '';
+
+  if (currentSuggestList.length === 0) {
+    elements.suggestList.classList.add('hidden');
+    return;
+  }
+
+  // 時計アイコン (履歴用)
+  const clockIcon = `<svg class="suggest-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`;
+  // 虫眼鏡アイコン (検索予測用)
+  const searchIcon = `<svg class="suggest-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>`;
+
+  currentSuggestList.forEach((item, index) => {
+    const li = document.createElement('li');
+    li.className = 'suggest-item';
+    li.dataset.index = index;
+
+    const icon = item.type === 'history' ? clockIcon : searchIcon;
+    
+    li.innerHTML = `
+      ${icon}
+      <div class="suggest-content">
+        <span class="suggest-text">${escapeHtml(item.text)}</span>
+        ${item.type === 'history' ? `<span class="suggest-url">${escapeHtml(item.url)}</span>` : ''}
+      </div>
+    `;
+
+    // クリック・タップイベントの登録
+    li.addEventListener('click', (e) => {
+      e.preventDefault();
+      if (item.type === 'history') {
+        window.location.href = item.url;
+      } else {
+        elements.searchInput.value = item.text;
+        elements.suggestList.classList.add('hidden');
+        elements.searchForm.submit();
+      }
+    });
+
+    elements.suggestList.appendChild(li);
+  });
+
+  elements.suggestList.classList.remove('hidden');
+}
+
+// Google検索サジェストの非同期取得
+function fetchGoogleSuggests(query) {
+  const url = `https://suggestqueries.google.com/complete/search?client=chrome&q=${encodeURIComponent(query)}`;
+  
+  return fetch(url)
+    .then(res => {
+      if (!res.ok) throw new Error('Network response was not ok');
+      return res.json();
+    })
+    .then(data => {
+      // データ構造: [query, [suggest1, suggest2, ...], ...]
+      if (data && Array.isArray(data[1])) {
+        return data[1].map(text => ({ type: 'query', text: text }));
+      }
+      return [];
+    })
+    .catch(err => {
+      console.warn("Googleサジェスト取得に失敗しました:", err);
+      return [];
+    });
+}
+
+// ブラウザ履歴サジェストの非同期取得
+function fetchHistorySuggests(query) {
+  return new Promise((resolve) => {
+    if (typeof chrome === 'undefined' || !chrome.history || !chrome.history.search) {
+      resolve([]); // 拡張機能コンテキスト外の場合は空配列を返す
+      return;
+    }
+
+    // 入力文字にマッチする履歴を検索 (最大5件)
+    chrome.history.search({
+      text: query,
+      maxResults: 5
+    }, (results) => {
+      if (results && results.length > 0) {
+        const items = results.map(item => {
+          // タイトルがない場合はURLを使用
+          const displayTitle = item.title ? item.title : item.url;
+          return {
+            type: 'history',
+            text: displayTitle,
+            url: item.url
+          };
+        });
+        resolve(items);
+      } else {
+        resolve([]);
+      }
+    });
+  });
+}
+
+// HTMLエスケープ処理 (セキュリティ対策)
+function escapeHtml(string) {
+  if (typeof string !== 'string') {
+    return string;
+  }
+  return string.replace(/[&<>"']/g, function(match) {
+    const escapeMap = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#x27;'
+    };
+    return escapeMap[match];
+  });
 }
