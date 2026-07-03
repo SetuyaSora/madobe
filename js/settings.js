@@ -1,0 +1,358 @@
+/* -------------------------------------------------------------
+ * Chrome Wallpaper - Settings Controller Module
+ * ------------------------------------------------------------- */
+
+import { appState, elements } from './state.js';
+import { storage, loadVideoBlob, saveVideoBlob, deleteVideoBlob } from './storage.js';
+import { renderShortcuts } from './shortcuts.js';
+import { renderWidgets, saveWidgets, initWidgetsTimer } from './widgets.js';
+
+// 壁紙ソースの読み込みと適用
+export function applyVideoSource() {
+  if (appState.localVideoBlobUrl) {
+    URL.revokeObjectURL(appState.localVideoBlobUrl);
+    appState.localVideoBlobUrl = null;
+  }
+
+  const type = appState.currentSettings.bgType;
+
+  if (type === 'default') {
+    const sourceUrl = (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL) 
+      ? chrome.runtime.getURL('assets/default_bg.mp4') 
+      : 'assets/default_bg.mp4';
+    setVideoSource(sourceUrl);
+  } else if (type === 'url') {
+    setVideoSource(appState.currentSettings.bgUrl);
+  } else if (type === 'file') {
+    loadVideoBlob().then(blob => {
+      if (blob) {
+        appState.localVideoBlobUrl = URL.createObjectURL(blob);
+        setVideoSource(appState.localVideoBlobUrl);
+      } else {
+        console.warn("IndexedDBに動画Blobが見つかりません。デフォルトにフォールバックします。");
+        appState.currentSettings.bgType = 'default';
+        storage.set({ bgType: 'default' });
+        applyVideoSource();
+      }
+    }).catch(err => {
+      console.error("IndexedDBからの動画読み込みに失敗しました:", err);
+      appState.currentSettings.bgType = 'default';
+      storage.set({ bgType: 'default' });
+      applyVideoSource();
+    });
+  }
+}
+
+// ビデオソースの設定と再生開始
+export function setVideoSource(url) {
+  if (url && elements.video) {
+    elements.video.src = url;
+    elements.video.load();
+    
+    elements.video.playbackRate = parseFloat(appState.currentSettings.speed);
+    const vol = appState.currentSettings.volume / 100;
+    elements.video.volume = vol;
+    elements.video.muted = (vol === 0);
+
+    elements.video.play().catch(err => {
+      console.warn("動画の自動再生がブロックされました。ユーザー操作を待ちます。", err);
+    });
+  }
+}
+
+// ソースごとの入力UI表示切り替え
+export function toggleSourceInputVisibility(type) {
+  if (!elements.urlInputContainer || !elements.fileInputContainer) return;
+  if (type === 'url') {
+    elements.urlInputContainer.classList.remove('hidden');
+    elements.fileInputContainer.classList.add('hidden');
+  } else if (type === 'file') {
+    elements.urlInputContainer.classList.add('hidden');
+    elements.fileInputContainer.classList.remove('hidden');
+  } else {
+    elements.urlInputContainer.classList.add('hidden');
+    elements.fileInputContainer.classList.add('hidden');
+  }
+}
+
+// 全ての設定をDOM/動画プレイヤーへ適用・初期同期
+export function applyAllSettings() {
+  // 1. 壁紙ソースの適用
+  applyVideoSource();
+
+  // 2. 音量適用
+  const vol = appState.currentSettings.volume / 100;
+  if (elements.video) {
+    elements.video.volume = vol;
+    elements.video.muted = (vol === 0);
+  }
+  if (elements.volumeSlider) {
+    elements.volumeSlider.value = appState.currentSettings.volume;
+    elements.volumeValue.textContent = `${appState.currentSettings.volume}%`;
+  }
+
+  // 3. 再生速度適用
+  if (elements.video) {
+    elements.video.playbackRate = parseFloat(appState.currentSettings.speed);
+  }
+  if (elements.speedSelect) {
+    elements.speedSelect.value = appState.currentSettings.speed;
+  }
+
+  // 4. 暗度 (オーバーレイ不透明度) 適用
+  if (elements.overlay) {
+    elements.overlay.style.backgroundColor = `rgba(0, 0, 0, ${appState.currentSettings.overlayOpacity / 100})`;
+  }
+  if (elements.opacitySlider) {
+    elements.opacitySlider.value = appState.currentSettings.overlayOpacity;
+    elements.opacityValue.textContent = `${appState.currentSettings.overlayOpacity}%`;
+  }
+
+  // 5. 表示項目トグル適用
+  if (elements.showSearchCheckbox) {
+    elements.showSearchCheckbox.checked = appState.currentSettings.showSearch;
+  }
+  if (appState.currentSettings.showSearch) {
+    const hasSearch = appState.currentSettings.widgets.some(w => w.type === 'search-bar');
+    if (!hasSearch) {
+      appState.currentSettings.widgets.push({
+        id: 'widget_search_default',
+        type: 'search-bar',
+        gridX: 7, gridY: 4, gridW: 10, gridH: 1,
+        settings: {}
+      });
+    }
+  } else {
+    appState.currentSettings.widgets = appState.currentSettings.widgets.filter(w => w.type !== 'search-bar');
+  }
+
+  if (elements.drawerTrigger) {
+    if (appState.currentSettings.showShortcuts) {
+      elements.drawerTrigger.classList.remove('hidden');
+    } else {
+      elements.drawerTrigger.classList.add('hidden');
+      if (elements.shortcutsDrawer) {
+        elements.shortcutsDrawer.classList.remove('open');
+      }
+    }
+  }
+  if (elements.showShortcutsCheckbox) {
+    elements.showShortcutsCheckbox.checked = appState.currentSettings.showShortcuts;
+  }
+
+  // 6. 設定パネルのUIの同期
+  if (elements.videoSourceRadios) {
+    Array.from(elements.videoSourceRadios).forEach(radio => {
+      radio.checked = (radio.value === appState.currentSettings.bgType);
+    });
+  }
+  if (elements.videoUrlInput) {
+    elements.videoUrlInput.value = appState.currentSettings.bgUrl || '';
+  }
+  toggleSourceInputVisibility(appState.currentSettings.bgType);
+
+  // 7. ショートカットの描画
+  renderShortcuts();
+
+  // 8. ウィジェットの描画とタイマー開始
+  renderWidgets();
+  initWidgetsTimer();
+}
+
+// 設定変更関連イベントリスナーの初期化
+export function initSettings() {
+  // Visibility API による省電力・軽量化 (最重要)
+  document.addEventListener('visibilitychange', () => {
+    if (!elements.video) return;
+    if (document.hidden) {
+      elements.video.pause();
+      console.log('Tab backgrounded: Video paused for performance.');
+    } else {
+      elements.video.playbackRate = parseFloat(appState.currentSettings.speed);
+      elements.video.play().catch(e => console.log('Playback resume failed:', e));
+      console.log('Tab foregrounded: Video resumed.');
+    }
+  });
+
+  // 設定パネル開閉
+  if (elements.settingsToggle) {
+    elements.settingsToggle.addEventListener('click', (e) => {
+      e.stopPropagation();
+      elements.settingsPanel.classList.toggle('hidden');
+    });
+  }
+
+  if (elements.settingsClose) {
+    elements.settingsClose.addEventListener('click', () => {
+      elements.settingsPanel.classList.add('hidden');
+    });
+  }
+
+  document.addEventListener('click', (e) => {
+    if (elements.settingsPanel && !elements.settingsPanel.classList.contains('hidden') && 
+        !elements.settingsPanel.contains(e.target) && 
+        !elements.settingsToggle.contains(e.target)) {
+      elements.settingsPanel.classList.add('hidden');
+    }
+  });
+
+  // 壁紙ソースのラジオボタン変更
+  if (elements.videoSourceRadios) {
+    Array.from(elements.videoSourceRadios).forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        const type = e.target.value;
+        toggleSourceInputVisibility(type);
+
+        if (type === 'default') {
+          appState.currentSettings.bgType = 'default';
+          storage.set({ bgType: 'default' });
+          deleteVideoBlob().catch(err => console.error(err));
+          applyVideoSource();
+        } else if (type === 'file') {
+          loadVideoBlob().then(blob => {
+            if (blob) {
+              appState.currentSettings.bgType = 'file';
+              storage.set({ bgType: 'file' });
+              applyVideoSource();
+            } else {
+              elements.videoFileInput.click();
+            }
+          }).catch(err => {
+            elements.videoFileInput.click();
+          });
+        }
+      });
+    });
+  }
+
+  // 外部URLの適用
+  if (elements.saveUrlBtn) {
+    elements.saveUrlBtn.addEventListener('click', () => {
+      const url = elements.videoUrlInput.value.trim();
+      if (url) {
+        appState.currentSettings.bgType = 'url';
+        appState.currentSettings.bgUrl = url;
+        storage.set({
+          bgType: 'url',
+          bgUrl: url
+        }, () => {
+          deleteVideoBlob().catch(err => console.error(err));
+          applyVideoSource();
+          alert('壁紙URLを適用しました。');
+        });
+      } else {
+        alert('有効な動画URLを入力してください。');
+      }
+    });
+  }
+
+  // ローカルファイル選択
+  if (elements.videoFileInput) {
+    elements.videoFileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        saveVideoBlob(file).then(() => {
+          appState.currentSettings.bgType = 'file';
+          storage.set({ bgType: 'file' }, () => {
+            applyVideoSource();
+          });
+        }).catch(err => {
+          console.error("IndexedDBへの動画保存に失敗しました:", err);
+          alert("動画の保存に失敗しました。容量が大きい（またはブラウザの空き容量不足）可能性があります。");
+        });
+      }
+    });
+  }
+
+  // 暗度 (不透明度) スライダー
+  if (elements.opacitySlider) {
+    elements.opacitySlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      appState.currentSettings.overlayOpacity = val;
+      elements.opacityValue.textContent = `${val}%`;
+      if (elements.overlay) {
+        elements.overlay.style.backgroundColor = `rgba(0, 0, 0, ${val / 100})`;
+      }
+    });
+
+    elements.opacitySlider.addEventListener('change', () => {
+      storage.set({ overlayOpacity: appState.currentSettings.overlayOpacity });
+    });
+  }
+
+  // 音量スライダー
+  if (elements.volumeSlider) {
+    elements.volumeSlider.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      appState.currentSettings.volume = val;
+      elements.volumeValue.textContent = `${val}%`;
+      
+      if (elements.video) {
+        const vol = val / 100;
+        elements.video.volume = vol;
+        elements.video.muted = (vol === 0);
+      }
+    });
+
+    elements.volumeSlider.addEventListener('change', () => {
+      storage.set({ volume: appState.currentSettings.volume });
+    });
+  }
+
+  // 再生速度
+  if (elements.speedSelect) {
+    elements.speedSelect.addEventListener('change', (e) => {
+      const speed = parseFloat(e.target.value);
+      appState.currentSettings.speed = speed;
+      if (elements.video) {
+        elements.video.playbackRate = speed;
+      }
+      storage.set({ speed: speed });
+    });
+  }
+
+  // 表示トグル (検索)
+  if (elements.showSearchCheckbox) {
+    elements.showSearchCheckbox.addEventListener('change', (e) => {
+      const checked = e.target.checked;
+      appState.currentSettings.showSearch = checked;
+      storage.set({ showSearch: checked });
+      if (checked) {
+        const hasSearch = appState.currentSettings.widgets.some(w => w.type === 'search-bar');
+        if (!hasSearch) {
+          appState.currentSettings.widgets.push({
+            id: 'widget_search_' + Date.now(),
+            type: 'search-bar',
+            gridX: 7, gridY: 4, gridW: 10, gridH: 1,
+            settings: {}
+          });
+          saveWidgets();
+          renderWidgets();
+        }
+      } else {
+        appState.currentSettings.widgets = appState.currentSettings.widgets.filter(w => w.type !== 'search-bar');
+        saveWidgets();
+        renderWidgets();
+      }
+    });
+  }
+
+  // 表示トグル (ショートカット)
+  if (elements.showShortcutsCheckbox) {
+    elements.showShortcutsCheckbox.addEventListener('change', (e) => {
+      const checked = e.target.checked;
+      appState.currentSettings.showShortcuts = checked;
+      storage.set({ showShortcuts: checked });
+      if (elements.drawerTrigger) {
+        if (checked) {
+          elements.drawerTrigger.classList.remove('hidden');
+        } else {
+          elements.drawerTrigger.classList.add('hidden');
+          if (elements.shortcutsDrawer) {
+            elements.shortcutsDrawer.classList.remove('open');
+          }
+        }
+      }
+    });
+  }
+}

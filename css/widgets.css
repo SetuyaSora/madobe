@@ -1,0 +1,417 @@
+/* -------------------------------------------------------------
+ * Chrome Wallpaper - CSS Stylesheet
+ * 7.5. Core Widget Layers, Frames, Drag snap & Base Gadget Styles
+ * ------------------------------------------------------------- */
+
+/* ウィジェット配置レイヤー */
+#widgets-layer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 5; /* 検索バー (z-index 2) の上に引き上げ、DnDイベントを確実にキャッチ */
+  pointer-events: none; /* 下の要素のクリックを阻害しない */
+  user-select: none;
+}
+
+body.dragging-widget #widgets-layer {
+  pointer-events: auto !important;
+}
+
+/* ウィジェットの個別フレーム (通常モード: 枠なし、背景透明) */
+.widget-frame {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 16px;
+  overflow: visible; /* サジェストを枠外に出すため、通常時はvisibleで突き抜ける */
+  pointer-events: auto; /* ウィジェット内はクリック可能 */
+  transition: left 0.25s cubic-bezier(0.16, 1, 0.3, 1), top 0.25s cubic-bezier(0.16, 1, 0.3, 1), width 0.25s cubic-bezier(0.16, 1, 0.3, 1), height 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  user-select: none;
+}
+
+/* 編集モード時のウィジェット枠 (すりガラス枠出現) */
+body.edit-mode .widget-frame {
+  background: rgba(15, 15, 20, 0.55);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border-color: var(--border-glass);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3), var(--shadow-main);
+  overflow: hidden; /* リサイズ用のつまみ制限のため、一般ウィジェットはoverflow: hidden */
+}
+
+/* 検索バーは編集モードでもサジェストのドロップダウンを表示させるため、常にoverflow: visibleを維持 */
+body.edit-mode .widget-frame.widget-type-search-bar {
+  overflow: visible !important;
+}
+
+.widget-frame:hover {
+  /* 通常時は枠ホバーを何もしない、編集モード中のみホバー線を追加 */
+}
+body.edit-mode .widget-frame:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+/* ドラッグ移動中・リサイズ中 */
+body.edit-mode .widget-frame.dragging,
+body.edit-mode .widget-frame.resizing {
+  opacity: 0.85;
+  border-color: var(--accent-color);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5), 0 0 0 2px var(--accent-glow);
+  z-index: 999; /* 最前面へ */
+  transition: none !important; /* ドラッグ操作の追従遅延（もっさり感）を防ぐため、トランジションを強制無効化 */
+}
+
+/* ウィジェットヘッダー (ドラッグハンドル) */
+.widget-header {
+  display: none !important; /* 通常モード時は完全に非表示 */
+}
+
+body.edit-mode .widget-header {
+  display: flex !important; /* 編集モード時のみ出現 */
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  cursor: move;
+}
+
+.widget-title {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.8px;
+}
+
+.widget-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  transition: var(--transition-smooth);
+}
+
+.widget-close-btn:hover {
+  color: #fff;
+  background: rgba(239, 68, 68, 0.8);
+}
+
+.widget-close-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* ウィジェットボディ */
+.widget-body {
+  flex: 1;
+  position: relative;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.widget-type-search-bar .widget-body {
+  overflow: visible !important; /* 検索バーボディもサジェスト表示のためvisible */
+}
+
+/* リサイズハンドル */
+.widget-resize-handle {
+  display: none !important; /* 通常モード時は完全に非表示 */
+}
+
+body.edit-mode .widget-resize-handle {
+  display: block !important; /* 編集モード時のみ出現 */
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: 14px;
+  height: 14px;
+  cursor: se-resize;
+  z-index: 10;
+  background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.2) 40%, rgba(255,255,255,0.2) 60%, transparent 60%, transparent 80%, rgba(255,255,255,0.2) 80%);
+  border-bottom-right-radius: 12px;
+}
+
+body.edit-mode .widget-frame:hover .widget-resize-handle {
+  background: linear-gradient(135deg, transparent 40%, rgba(255,255,255,0.5) 40%, rgba(255,255,255,0.5) 60%, transparent 60%, transparent 80%, rgba(255,255,255,0.5) 80%);
+}
+
+/* 通常表示時の文字の視認性確保のためのテキストシャドウ */
+.clock-time,
+.clock-date,
+.calendar-month-year,
+.calendar-table td,
+.calendar-table th,
+.widget-memo textarea {
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+
+/* ドラッグ時のグリッド配置スナッププレビュー枠 */
+.widget-snap-preview {
+  position: absolute;
+  border: 2px dashed var(--accent-color);
+  background: rgba(99, 102, 241, 0.15);
+  border-radius: 16px;
+  pointer-events: none;
+  z-index: 998;
+  transition: all 0.1s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* --- 各ウィジェットの固有スタイル --- */
+
+/* 1. デジタル時計ウィジェット */
+.widget-digital-clock {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.clock-time {
+  font-size: 2.8rem;
+  font-weight: 300;
+  color: #fff;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+  text-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  line-height: 1;
+}
+
+.clock-date {
+  font-size: 0.95rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  margin-top: 8px;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+  white-space: nowrap;
+}
+
+/* 2. アナログ時計ウィジェット */
+.widget-analog-clock {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.analog-clock-face {
+  position: relative;
+  width: 90%;
+  height: 90%;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.15);
+  background: rgba(0, 0, 0, 0.15);
+  box-shadow: inset 0 2px 10px rgba(0,0,0,0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 12, 3, 6, 9 の簡易インジケーター */
+.analog-clock-face::before {
+  content: '';
+  position: absolute;
+  top: 6px; bottom: 6px; left: 50%; width: 2px;
+  background: linear-gradient(to bottom, #fff 0%, #fff 6px, transparent 6px, transparent calc(100% - 6px), #fff calc(100% - 6px), #fff 100%);
+  transform: translateX(-50%);
+  opacity: 0.3;
+}
+.analog-clock-face::after {
+  content: '';
+  position: absolute;
+  left: 6px; right: 6px; top: 50%; height: 2px;
+  background: linear-gradient(to right, #fff 0%, #fff 6px, transparent 6px, transparent calc(100% - 6px), #fff calc(100% - 6px), #fff 100%);
+  transform: translateY(-50%);
+  opacity: 0.3;
+}
+
+.clock-hand {
+  position: absolute;
+  bottom: 50%;
+  left: 50%;
+  transform-origin: bottom center;
+  border-radius: 4px;
+}
+
+.clock-hand.hour {
+  width: 4px;
+  height: 28%;
+  background: #fff;
+  z-index: 3;
+}
+
+.clock-hand.minute {
+  width: 2.5px;
+  height: 38%;
+  background: rgba(255,255,255,0.85);
+  z-index: 2;
+}
+
+.clock-hand.second {
+  width: 1.5px;
+  height: 42%;
+  background: var(--accent-color);
+  z-index: 1;
+  border-radius: 0;
+}
+
+.clock-center-dot {
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  z-index: 4;
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+/* 3. カレンダーウィジェット */
+.widget-calendar {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.calendar-month-year {
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+  color: #fff;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.calendar-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+  font-size: 11px;
+}
+
+.calendar-table th {
+  color: var(--text-secondary);
+  font-weight: 500;
+  padding: 4px 2px;
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.calendar-table td {
+  color: var(--text-primary);
+  padding: 5px 2px;
+  font-weight: 400;
+  transition: background 0.15s ease;
+}
+
+.calendar-table td.today-cell {
+  background: var(--accent-gradient);
+  color: #fff !important;
+  font-weight: 600;
+  border-radius: 50%;
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+
+.calendar-table td.other-month {
+  opacity: 0.25;
+}
+
+/* 4. メモ帳ウィジェット */
+.widget-memo {
+  width: 100%;
+  height: 100%;
+  display: flex;
+}
+
+.memo-textarea {
+  width: 100%;
+  height: 100%;
+  background: transparent;
+  border: none;
+  outline: none;
+  resize: none;
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.memo-textarea::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.memo-textarea::-webkit-scrollbar {
+  width: 3px;
+}
+
+.memo-textarea::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1.5px;
+}
+
+/* 5. 検索バーウィジェット固有のスタイル */
+.widget-frame.widget-type-search-bar {
+  overflow: visible !important; /* サジェストリストを外枠からはみ出して表示させる */
+  background: transparent; /* 通常モード時は透明、入力欄自体が浮かぶように */
+}
+
+body.edit-mode .widget-frame.widget-type-search-bar {
+  background: rgba(15, 15, 20, 0.55); /* 編集モード時は他のウィジェットと同じ半透明背景 */
+}
+
+body.edit-mode .widget-type-search-bar .widget-header {
+  padding: 2px 10px; /* 縦1セルに収めるために編集ヘッダーをスリム化 */
+}
+
+.widget-type-search-bar .widget-body {
+  padding: 0 10px; /* 上下余白を完全にゼロにして引き締める */
+  justify-content: center;
+  overflow: visible !important;
+}
+
+.widget-type-search-bar #search-form {
+  width: 100%;
+  position: relative;
+}
+
+.widget-type-search-bar .search-input-wrapper {
+  width: 100%;
+  border-radius: 20px;
+  padding: 5px 12px; /* 入力欄自体も少しスリム化して縦サイズを抑制 */
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.widget-type-search-bar #search-input {
+  font-size: 14px;
+  padding: 3px 0;
+}
+
+.widget-type-search-bar .search-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 10px;
+}
+
+/* サジェストリストのスタッキング優先度 */
+.widget-type-search-bar #search-suggest-list {
+  z-index: 9999 !important; /* 他のウィジェットの手前に確実に表示 */
+}
