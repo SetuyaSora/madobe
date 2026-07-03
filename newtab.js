@@ -68,6 +68,64 @@ let editingShortcutIndex = -1;
 // ローカル動画のBlob URL一時保管用
 let localVideoBlobUrl = null;
 
+// -------------------------------------------------------------
+// IndexedDB 制御用 (ローカル動画の永続保存用)
+// -------------------------------------------------------------
+const DB_NAME = 'ChromeWallpaperDB';
+const DB_VERSION = 1;
+const STORE_NAME = 'wallpapers';
+const KEY_NAME = 'user_video';
+
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = (e) => {
+      const db = e.target.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+  });
+}
+
+function saveVideoBlob(blob) {
+  return openDB().then(db => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.put(blob, KEY_NAME);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve();
+    });
+  });
+}
+
+function loadVideoBlob() {
+  return openDB().then(db => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([STORE_NAME], 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.get(KEY_NAME);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve(request.result);
+    });
+  });
+}
+
+function deleteVideoBlob() {
+  return openDB().then(db => {
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction([STORE_NAME], 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.delete(KEY_NAME);
+      request.onerror = () => reject(request.error);
+      request.onsuccess = () => resolve();
+    });
+  });
+}
+
 // DOM要素のキャッシュ
 const elements = {
   video: document.getElementById('bg-video'),
@@ -171,33 +229,47 @@ function applyVideoSource() {
   }
 
   const type = currentSettings.bgType;
-  let sourceUrl = '';
 
   if (type === 'default') {
-    // 拡張機能パッケージ内の動画パス
-    sourceUrl = (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL) 
+    const sourceUrl = (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL) 
       ? chrome.runtime.getURL('assets/default_bg.mp4') 
       : 'assets/default_bg.mp4';
+    setVideoSource(sourceUrl);
   } else if (type === 'url') {
-    sourceUrl = currentSettings.bgUrl;
+    setVideoSource(currentSettings.bgUrl);
   } else if (type === 'file') {
-    // ローカルファイルはセッション限りのため、初期ロード時はデフォルトに戻すか警告表示
-    // (newtab.js 読み込み時はまだBlob化されてないため、デフォルトを代替として再生)
-    sourceUrl = (typeof chrome !== 'undefined' && chrome.runtime && chrome.runtime.getURL) 
-      ? chrome.runtime.getURL('assets/default_bg.mp4') 
-      : 'assets/default_bg.mp4';
-    // ラジオボタンの選択をdefaultに戻す (自動ロード不可のため)
-    currentSettings.bgType = 'default';
-    Array.from(elements.videoSourceRadios).forEach(radio => {
-      radio.checked = (radio.value === 'default');
+    loadVideoBlob().then(blob => {
+      if (blob) {
+        localVideoBlobUrl = URL.createObjectURL(blob);
+        setVideoSource(localVideoBlobUrl);
+      } else {
+        // 保存されていなければデフォルトにフォールバック
+        console.warn("IndexedDBに動画Blobが見つかりません。デフォルトにフォールバックします。");
+        currentSettings.bgType = 'default';
+        storage.set({ bgType: 'default' });
+        applyVideoSource();
+      }
+    }).catch(err => {
+      console.error("IndexedDBからの動画読み込みに失敗しました:", err);
+      currentSettings.bgType = 'default';
+      storage.set({ bgType: 'default' });
+      applyVideoSource();
     });
-    toggleSourceInputVisibility('default');
   }
+}
 
-  if (sourceUrl) {
-    elements.video.src = sourceUrl;
+// ビデオソースの設定と再生開始
+function setVideoSource(url) {
+  if (url) {
+    elements.video.src = url;
     elements.video.load();
-    // ユーザー操作なしで自動再生させるため、muted属性を保証
+    
+    // 再生速度と音量を再適用
+    elements.video.playbackRate = parseFloat(currentSettings.speed);
+    const vol = currentSettings.volume / 100;
+    elements.video.volume = vol;
+    elements.video.muted = (vol === 0);
+
     elements.video.play().catch(err => {
       console.warn("動画の自動再生がブロックされました。ユーザー操作を待ちます。", err);
     });
@@ -263,7 +335,21 @@ function initEventListeners() {
       if (type === 'default') {
         currentSettings.bgType = 'default';
         storage.set({ bgType: 'default' });
+        deleteVideoBlob().catch(err => console.error(err));
         applyVideoSource();
+      } else if (type === 'file') {
+        // 既にIndexedDBにデータがあればそれを再生、無ければファイル選択を促す
+        loadVideoBlob().then(blob => {
+          if (blob) {
+            currentSettings.bgType = 'file';
+            storage.set({ bgType: 'file' });
+            applyVideoSource();
+          } else {
+            elements.videoFileInput.click();
+          }
+        }).catch(err => {
+          elements.videoFileInput.click();
+        });
       }
     });
   });
@@ -278,6 +364,7 @@ function initEventListeners() {
         bgType: 'url',
         bgUrl: url
       }, () => {
+        deleteVideoBlob().catch(err => console.error(err));
         applyVideoSource();
         alert('壁紙URLを適用しました。');
       });
@@ -290,24 +377,15 @@ function initEventListeners() {
   elements.videoFileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
     if (file) {
-      currentSettings.bgType = 'file';
-      
-      // Blob URLの生成
-      if (localVideoBlobUrl) {
-        URL.revokeObjectURL(localVideoBlobUrl);
-      }
-      localVideoBlobUrl = URL.createObjectURL(file);
-      
-      // 再生適用
-      elements.video.src = localVideoBlobUrl;
-      elements.video.load();
-      elements.video.play().catch(err => console.error(err));
-      
-      // 再生速度と音量を再適用
-      elements.video.playbackRate = parseFloat(currentSettings.speed);
-      const vol = currentSettings.volume / 100;
-      elements.video.volume = vol;
-      elements.video.muted = (vol === 0);
+      saveVideoBlob(file).then(() => {
+        currentSettings.bgType = 'file';
+        storage.set({ bgType: 'file' }, () => {
+          applyVideoSource();
+        });
+      }).catch(err => {
+        console.error("IndexedDBへの動画保存に失敗しました:", err);
+        alert("動画の保存に失敗しました。容量が大きい（またはブラウザの空き容量不足）可能性があります。");
+      });
     }
   });
 
