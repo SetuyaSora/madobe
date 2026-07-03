@@ -1646,3 +1646,201 @@ body.edit-mode .widget-type-search-bar .widget-header {
   height: 14px;
   flex-shrink: 0;
 }
+
+/* =============================================================
+   7. ウィジェットサイズ別アダプティブ・レイアウト (Adaptive Layout)
+   ============================================================= */
+
+/* デジタル時計の小レイアウト (秒・日付非表示で時刻最大化) */
+.widget-frame.layout-small .clock-seconds {
+  display: none !important;
+}
+
+.widget-frame.layout-small .clock-date {
+  display: none !important;
+}
+
+.widget-frame.layout-small .clock-time {
+  font-size: 2.2rem !important;
+}
+
+/* アナログ時計の小レイアウト (秒針を隠して描画負荷カット) */
+.widget-frame.layout-small .widget-analog-clock .clock-hand.second {
+  display: none !important;
+}
+
+/* カレンダーの大レイアウト (iPad風2カラム) */
+.widget-calendar-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+}
+
+.calendar-detail-pane {
+  display: none;
+}
+
+.calendar-grid-pane {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 7x5以上のサイズで大レイアウト有効化 */
+.widget-frame.layout-large .widget-calendar-container {
+  flex-direction: row;
+  gap: 16px;
+}
+
+.widget-frame.layout-large .calendar-detail-pane {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 38%;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 10px;
+  text-shadow: var(--shadow-main);
+  box-sizing: border-box;
+  animation: fade-in 0.25s ease forwards;
+}
+
+.calendar-detail-dayname {
+  color: #ef4444; /* 金曜・日曜などはJSで動的着色 */
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.calendar-detail-daynum {
+  font-size: 3.4rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+  margin: 6px 0;
+}
+
+.calendar-detail-month {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.widget-frame.layout-large .calendar-grid-pane {
+  width: 62%;
+}
+
+/* メモ帳のレイアウトと多機能ツールバー */
+.widget-memo {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+}
+
+.memo-toolbar {
+  display: none;
+}
+
+/* 5x4以上のサイズでツールバー表示 */
+.widget-frame.layout-large .memo-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  margin-bottom: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  box-sizing: border-box;
+  animation: fade-in 0.2s ease forwards;
+}
+
+.memo-color-palette {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.color-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.color-dot:hover {
+  transform: scale(1.25);
+  border-color: #fff;
+}
+
+.color-dot.active {
+  border-color: #fff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.5);
+}
+
+.color-dot.color-default { background: rgba(15, 15, 20, 0.8); }
+.color-dot.color-yellow { background: rgba(234, 179, 8, 0.85); }
+.color-dot.color-green { background: rgba(34, 197, 94, 0.85); }
+.color-dot.color-blue { background: rgba(59, 130, 246, 0.85); }
+
+.memo-right-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.memo-stats {
+  font-size: 9px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.memo-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: var(--transition-smooth);
+}
+
+.memo-btn:hover {
+  color: #ef4444;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.memo-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* メモ帳のカラーテーマ適用 (グラスモルフィズムに色をブレンド) */
+.widget-frame.memo-theme-yellow {
+  background: rgba(100, 80, 20, 0.35) !important;
+  border-color: rgba(234, 179, 8, 0.25) !important;
+}
+.widget-frame.memo-theme-green {
+  background: rgba(20, 80, 45, 0.35) !important;
+  border-color: rgba(34, 197, 94, 0.25) !important;
+}
+.widget-frame.memo-theme-blue {
+  background: rgba(20, 45, 100, 0.35) !important;
+  border-color: rgba(59, 130, 246, 0.25) !important;
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

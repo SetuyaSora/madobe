@@ -72,6 +72,15 @@ const DEFAULT_SETTINGS = {
   ]
 };
 
+// ウィジェットの種類ごとのサイズ制限（アダプティブ制約）
+const WIDGET_RULES = {
+  'search-bar':    { minW: 6, minH: 1, maxW: 24, maxH: 3 },
+  'digital-clock': { minW: 3, minH: 2, maxW: 12, maxH: 5 },
+  'analog-clock':  { minW: 3, minH: 3, maxW: 10, maxH: 10 },
+  'calendar':      { minW: 4, minH: 4, maxW: 16, maxH: 8 },
+  'memo':          { minW: 3, minH: 3, maxW: 16, maxH: 8 }
+};
+
 // 現在の設定保持用
 let currentSettings = { ...DEFAULT_SETTINGS };
 // 編集中のショートカットのインデックス (新規追加時は -1)
@@ -1044,8 +1053,10 @@ function updateSuggestList(query) {
       }
     });
 
-    // 最大8件に絞る
-    currentSuggestList = merged.slice(0, 8);
+    // 検索バーのサイズに基づいて表示件数を制限 (小サイズは3件、大サイズは8件)
+    const searchWidget = currentSettings.widgets.find(w => w.type === 'search-bar');
+    const maxSuggestItems = (searchWidget && searchWidget.gridW < 12) ? 3 : 8;
+    currentSuggestList = merged.slice(0, maxSuggestItems);
     activeSuggestIndex = -1;
 
     renderSuggestItems();
@@ -1388,8 +1399,17 @@ function makeWidgetResizable(widgetFrame, widgetData) {
       let nextGridW = initialGridW + gridDeltaW;
       let nextGridH = initialGridH + gridDeltaH;
 
-      if (nextGridW < 2) nextGridW = 2;
-      if (nextGridH < 2) nextGridH = 2;
+      // WIDGET_RULES の制約ルールを適用
+      const rules = WIDGET_RULES[widgetData.type] || { minW: 2, minH: 2, maxW: 24, maxH: 12 };
+      const minW = rules.minW;
+      const minH = rules.minH;
+      const maxW = rules.maxW || 24;
+      const maxH = rules.maxH || 12;
+
+      if (nextGridW < minW) nextGridW = minW;
+      if (nextGridH < minH) nextGridH = minH;
+      if (nextGridW > maxW) nextGridW = maxW;
+      if (nextGridH > maxH) nextGridH = maxH;
 
       if (widgetData.gridX + nextGridW > 24) nextGridW = 24 - widgetData.gridX;
       if (widgetData.gridY + nextGridH > 12) nextGridH = 12 - widgetData.gridY;
@@ -1402,6 +1422,9 @@ function makeWidgetResizable(widgetFrame, widgetData) {
 
       widgetFrame.style.width = (currentGridW / 24) * 100 + '%';
       widgetFrame.style.height = (currentGridH / 12) * 100 + '%';
+
+      // リアルタイムにサイズクラスをトグル付与（カクつきなく中身の表示を切り替え）
+      applyAdaptiveLayoutClasses(widgetFrame, widgetData.type, currentGridW, currentGridH);
     }
 
     function onMouseUp() {
@@ -1427,52 +1450,60 @@ function makeWidgetResizable(widgetFrame, widgetData) {
 }
 
 // カレンダーのHTML生成
-function generateCalendarHtml() {
+function generateCalendarHtml(widget) {
   const now = new Date();
   const year = now.getFullYear();
   const month = now.getMonth();
   const today = now.getDate();
+  const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+  const dayOfWeekName = dayNames[now.getDay()];
 
   const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
   const firstDay = new Date(year, month, 1).getDay();
   const lastDate = new Date(year, month + 1, 0).getDate();
 
-  let html = `
-    <div class="widget-calendar">
-      <div class="calendar-month-year">${year}年 ${monthNames[month]}</div>
-      <table class="calendar-table">
-        <thead>
-          <tr>
-            <th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th>
-          </tr>
-        </thead>
-        <tbody>
-  `;
-
+  let tableRowsHtml = '';
   let date = 1;
   for (let i = 0; i < 6; i++) {
-    html += '<tr>';
+    tableRowsHtml += '<tr>';
     for (let j = 0; j < 7; j++) {
       if (i === 0 && j < firstDay) {
-        html += '<td class="other-month"></td>';
+        tableRowsHtml += '<td class="other-month"></td>';
       } else if (date > lastDate) {
-        html += '<td class="other-month"></td>';
+        tableRowsHtml += '<td class="other-month"></td>';
       } else {
         const isToday = date === today;
-        html += `<td class="${isToday ? 'today-cell' : ''}">${date}</td>`;
+        tableRowsHtml += `<td class="${isToday ? 'today-cell' : ''}">${date}</td>`;
         date++;
       }
     }
-    html += '</tr>';
+    tableRowsHtml += '</tr>';
     if (date > lastDate) break;
   }
 
-  html += `
-        </tbody>
-      </table>
+  // 2カラムと通常表示の切り替え
+  return `
+    <div class="widget-calendar-container">
+      <div class="calendar-detail-pane">
+        <div class="calendar-detail-dayname" style="color: ${now.getDay() === 0 || now.getDay() === 6 ? '#ef4444' : '#a855f7'}">${dayOfWeekName}曜日</div>
+        <div class="calendar-detail-daynum">${today}</div>
+        <div class="calendar-detail-month">${year}年 ${monthNames[month]}</div>
+      </div>
+      <div class="calendar-grid-pane">
+        <div class="calendar-month-year">${year}年 ${monthNames[month]}</div>
+        <table class="calendar-table">
+          <thead>
+            <tr>
+              <th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRowsHtml}
+          </tbody>
+        </table>
+      </div>
     </div>
   `;
-  return html;
 }
 
 // 全ウィジェットの描画
@@ -1494,17 +1525,21 @@ function renderWidgets() {
     frame.style.width = (widget.gridW / 24) * 100 + '%';
     frame.style.height = (widget.gridH / 12) * 100 + '%';
 
+    // アダプティブレイアウト用クラスの初期適用
+    applyAdaptiveLayoutClasses(frame, widget.type, widget.gridW, widget.gridH);
+
     // タイトルの設定
     let title = 'ウィジェット';
     let bodyHtml = '';
 
     if (widget.type === 'search-bar') {
       title = 'Google 検索';
+      const isSmall = widget.gridW < 12;
       bodyHtml = `
         <form id="search-form" action="https://www.google.com/search" method="get">
           <div class="search-input-wrapper">
             <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-            <input type="text" name="q" id="search-input" placeholder="Google で検索..." autocomplete="off">
+            <input type="text" name="q" id="search-input" placeholder="${isSmall ? '検索...' : 'Google で検索、またはURLを入力'}" autocomplete="off">
           </div>
           <ul id="search-suggest-list" class="hidden"></ul>
         </form>
@@ -1531,14 +1566,43 @@ function renderWidgets() {
       `;
     } else if (widget.type === 'calendar') {
       title = 'カレンダー';
-      bodyHtml = generateCalendarHtml();
+      bodyHtml = generateCalendarHtml(widget);
     } else if (widget.type === 'memo') {
       title = 'メモ帳';
-      bodyHtml = `
-        <div class="widget-memo">
-          <textarea class="memo-textarea" placeholder="メモを入力...">${escapeHtml(widget.settings.text || '')}</textarea>
+      const text = widget.settings.text || '';
+      const isLarge = widget.gridW >= 5 && widget.gridH >= 4;
+      const activeColor = widget.settings.color || 'default';
+
+      // カラーパレットツールバーのHTML
+      const toolbarHtml = `
+        <div class="memo-toolbar">
+          <div class="memo-color-palette">
+            <div class="color-dot color-default ${activeColor === 'default' ? 'active' : ''}" data-color="default" title="デフォルト"></div>
+            <div class="color-dot color-yellow ${activeColor === 'yellow' ? 'active' : ''}" data-color="yellow" title="黄"></div>
+            <div class="color-dot color-green ${activeColor === 'green' ? 'active' : ''}" data-color="green" title="緑"></div>
+            <div class="color-dot color-blue ${activeColor === 'blue' ? 'active' : ''}" data-color="blue" title="青"></div>
+          </div>
+          <div class="memo-right-controls">
+            <span class="memo-stats"><span class="memo-char-count">${text.length}</span>文字</span>
+            <button class="memo-btn memo-clear-btn" title="内容をクリア">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
         </div>
       `;
+
+      bodyHtml = `
+        <div class="widget-memo">
+          ${isLarge ? toolbarHtml : ''}
+          <textarea class="memo-textarea" placeholder="メモを入力...">${escapeHtml(text)}</textarea>
+        </div>
+      `;
+
+      // カラーテーマ適用
+      frame.classList.remove('memo-theme-yellow', 'memo-theme-green', 'memo-theme-blue');
+      if (activeColor !== 'default') {
+        frame.classList.add(`memo-theme-${activeColor}`);
+      }
     }
 
     frame.innerHTML = `
@@ -1579,15 +1643,51 @@ function renderWidgets() {
       elements.searchInput.addEventListener('blur', () => { isShortcutDialogOpen = false; closeShortcutsDrawer(); });
     }
 
-    // メモ帳のテキスト保存＆ドロワーロック制御
+    // メモ帳のバインド (カラーパレット・文字数・クリア機能)
     if (widget.type === 'memo') {
       const textarea = frame.querySelector('.memo-textarea');
+      const charCountSpan = frame.querySelector('.memo-char-count');
+
       textarea.addEventListener('input', (e) => {
         widget.settings.text = e.target.value;
+        if (charCountSpan) {
+          charCountSpan.textContent = e.target.value.length;
+        }
         saveWidgets();
       });
       textarea.addEventListener('focus', () => { isShortcutDialogOpen = true; });
       textarea.addEventListener('blur', () => { isShortcutDialogOpen = false; closeShortcutsDrawer(); });
+
+      // カラーパレットボタンのバインド
+      frame.querySelectorAll('.color-dot').forEach(dot => {
+        dot.addEventListener('click', (e) => {
+          const color = e.target.dataset.color;
+          widget.settings.color = color;
+
+          frame.classList.remove('memo-theme-yellow', 'memo-theme-green', 'memo-theme-blue');
+          if (color !== 'default') {
+            frame.classList.add(`memo-theme-${color}`);
+          }
+
+          frame.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+          e.target.classList.add('active');
+
+          saveWidgets();
+        });
+      });
+
+      // クリアボタンのバインド
+      const clearBtn = frame.querySelector('.memo-clear-btn');
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          if (confirm('メモの内容をすべて削除しますか？')) {
+            textarea.value = '';
+            widget.settings.text = '';
+            if (charCountSpan) charCountSpan.textContent = 0;
+            saveWidgets();
+          }
+        });
+      }
     }
 
     // 長押しで編集モードに入るイベントリスナー
@@ -1633,17 +1733,44 @@ function renderWidgets() {
 function updateWidgetsTime() {
   const now = new Date();
   
-  // デジタル時計の更新
-  const timeStr = now.toTimeString().split(' ')[0];
-  const year = now.getFullYear();
-  const month = now.getMonth() + 1;
-  const date = now.getDate();
-  const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
-  const day = dayNames[now.getDay()];
-  const dateStr = `${year}年${month}月${date}日 (${day})`;
+  // デジタル時計の更新 (個別アダプティブ対応)
+  document.querySelectorAll('.widget-type-digital-clock').forEach(clockFrame => {
+    const id = clockFrame.dataset.id;
+    const widget = currentSettings.widgets.find(w => w.id === id);
+    if (!widget) return;
 
-  document.querySelectorAll('.clock-time').forEach(el => el.textContent = timeStr);
-  document.querySelectorAll('.clock-date').forEach(el => el.textContent = dateStr);
+    const timeEl = clockFrame.querySelector('.clock-time');
+    const dateEl = clockFrame.querySelector('.clock-date');
+    const isSmall = widget.gridW < 5 || widget.gridH < 3;
+
+    if (timeEl) {
+      if (isSmall) {
+        // 秒なし (時:分)
+        const hr = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        timeEl.textContent = `${hr}:${min}`;
+      } else {
+        // 秒あり (時:分:秒)
+        const hr = String(now.getHours()).padStart(2, '0');
+        const min = String(now.getMinutes()).padStart(2, '0');
+        const sec = String(now.getSeconds()).padStart(2, '0');
+        timeEl.textContent = `${hr}:${min}:${sec}`;
+      }
+    }
+
+    if (dateEl) {
+      if (isSmall) {
+        dateEl.textContent = ''; // 非表示
+      } else {
+        const year = now.getFullYear();
+        const month = now.getMonth() + 1;
+        const date = now.getDate();
+        const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+        const day = dayNames[now.getDay()];
+        dateEl.textContent = `${year}年${month}月${date}日 (${day})`;
+      }
+    }
+  });
 
   // アナログ時計の更新
   const sec = now.getSeconds();
@@ -1897,4 +2024,24 @@ function updateAllWidgetsOpacityStyles() {
       applyWidgetOpacityStyle(frame, widget, opacity);
     }
   });
+}
+
+// ウィジェットのサイズに応じたレイアウトクラス（layout-small / layout-large）を付与するヘルパー
+function applyAdaptiveLayoutClasses(frame, type, w, h) {
+  if (type === 'digital-clock') {
+    const isSmall = w < 5 || h < 3;
+    frame.classList.toggle('layout-small', isSmall);
+  } else if (type === 'analog-clock') {
+    const isSmall = w < 5 || h < 5;
+    frame.classList.toggle('layout-small', isSmall);
+  } else if (type === 'calendar') {
+    const isLarge = w >= 7 && h >= 5;
+    frame.classList.toggle('layout-large', isLarge);
+  } else if (type === 'memo') {
+    const isLarge = w >= 5 && h >= 4;
+    frame.classList.toggle('layout-large', isLarge);
+  } else if (type === 'search-bar') {
+    const isSmall = w < 12;
+    frame.classList.toggle('layout-small', isSmall);
+  }
 }
