@@ -95,6 +95,10 @@ let pressStartX = 0;
 let pressStartY = 0;
 const LONG_PRESS_DELAY = 700; // 700ms 長押しで編集モード
 
+// ドラッグ＆ドロップ時の入れ替え用開始位置
+let dragStartGridX = 0;
+let dragStartGridY = 0;
+
 // -------------------------------------------------------------
 // IndexedDB 制御用 (ローカル動画の永続保存用)
 // -------------------------------------------------------------
@@ -695,6 +699,10 @@ function initEventListeners() {
       currentSettings.widgets = [];
     }
     currentSettings.widgets.push(newWidget);
+
+    // 新規ドロップ時の重なり衝突解決
+    resolveWidgetCollisions(newWidget.id);
+
     saveWidgets();
     renderWidgets();
   });
@@ -1187,6 +1195,10 @@ function makeWidgetDraggable(widgetFrame, widgetData) {
     const initialGridX = widgetData.gridX;
     const initialGridY = widgetData.gridY;
 
+    // スワップ用のドラッグ開始位置を記録
+    dragStartGridX = widgetData.gridX;
+    dragStartGridY = widgetData.gridY;
+
     const layerRect = elements.widgetsLayer.getBoundingClientRect();
     const cellW = layerRect.width / 24;
     const cellH = layerRect.height / 12;
@@ -1235,8 +1247,14 @@ function makeWidgetDraggable(widgetFrame, widgetData) {
       widgetFrame.classList.remove('dragging');
       preview.remove();
 
+      // 移動完了したウィジェットの座標決定前に、重なるウィジェットがあればドラッグ開始位置へ入れ替える
+      swapWidgets(widgetData, currentGridX, currentGridY);
+
       widgetData.gridX = currentGridX;
       widgetData.gridY = currentGridY;
+
+      // その他の残りの衝突を全方向に押し退け解決
+      resolveWidgetCollisions(widgetData.id);
 
       saveWidgets();
       renderWidgets();
@@ -1312,6 +1330,9 @@ function makeWidgetResizable(widgetFrame, widgetData) {
 
       widgetData.gridW = currentGridW;
       widgetData.gridH = currentGridH;
+
+      // リサイズで押し広げられた分、重なった既存のウィジェットを自動退避
+      resolveWidgetCollisions(widgetData.id);
 
       saveWidgets();
       renderWidgets();
@@ -1574,4 +1595,106 @@ function exitEditMode() {
   if (!isEditMode) return;
   isEditMode = false;
   document.body.classList.remove('edit-mode');
+}
+
+// --- 衝突検知と回避・位置入れ替え (スワップ) アルゴリズム ---
+
+// 2つのウィジェットが重なっているか判定
+function isWidgetsColliding(w1, w2) {
+  return !(
+    w1.gridX + w1.gridW <= w2.gridX ||
+    w2.gridX + w2.gridW <= w1.gridX ||
+    w1.gridY + w1.gridH <= w2.gridY ||
+    w2.gridY + w2.gridH <= w1.gridY
+  );
+}
+
+// ウィジェット同士の位置を入れ替える (iPhone風スワップ)
+function swapWidgets(movedWidget, targetX, targetY) {
+  const tempPos = { gridX: targetX, gridY: targetY, gridW: movedWidget.gridW, gridH: movedWidget.gridH };
+  
+  // 移動先に重なる既存のウィジェットを検出 (移動対象自身は除く)
+  const collidingWidget = currentSettings.widgets.find(w => w.id !== movedWidget.id && isWidgetsColliding(tempPos, w));
+
+  if (collidingWidget) {
+    // 衝突された相手を、移動ウィジェットのドラッグ開始位置へ瞬間移動させる
+    collidingWidget.gridX = dragStartGridX;
+    collidingWidget.gridY = dragStartGridY;
+
+    // スワップされたウィジェットが、スワップ先で別のウィジェットと二次衝突した場合は
+    // そのスワップされた側を起点として全方向の自動押し退けを再帰解決する
+    resolveWidgetCollisions(collidingWidget.id);
+  }
+}
+
+// 衝突が発生しているウィジェットを、全方向(上下左右)で最も移動距離が少なくて済む位置へ玉突き押し退け
+function resolveWidgetCollisions(movedWidgetId) {
+  let changed = true;
+  let iterations = 0;
+  const maxIterations = 50; // 無限ループガード
+  const gridWidthLimit = 24;
+  const gridHeightLimit = 12;
+
+  while (changed && iterations < maxIterations) {
+    changed = false;
+    iterations++;
+
+    for (let i = 0; i < currentSettings.widgets.length; i++) {
+      const w1 = currentSettings.widgets[i];
+
+      for (let j = 0; j < currentSettings.widgets.length; j++) {
+        if (i === j) continue;
+        const w2 = currentSettings.widgets[j];
+
+        // 2つのウィジェットが衝突している場合
+        if (isWidgetsColliding(w1, w2)) {
+          let target = w2;
+          let obstacle = w1;
+
+          // 最近動かされたウィジェット(movedWidgetId)を「固定物」とみなし、他方を動かす
+          if (w2.id === movedWidgetId) {
+            target = w1;
+            obstacle = w2;
+          }
+
+          // 上下左右に避けるために必要なズレ（シフト量）を計算
+          const shiftUp = (target.gridY + target.gridH) - obstacle.gridY;
+          const shiftDown = (obstacle.gridY + obstacle.gridH) - target.gridY;
+          const shiftLeft = (target.gridX + target.gridW) - obstacle.gridX;
+          const shiftRight = (obstacle.gridX + obstacle.gridW) - target.gridX;
+
+          const candidates = [];
+
+          // 画面外(0〜24マス, 0〜12マス)にはみ出さない候補だけを集める
+          if (target.gridY - shiftUp >= 0) {
+            candidates.push({ dir: 'up', dist: shiftUp, x: target.gridX, y: target.gridY - shiftUp });
+          }
+          if (target.gridY + shiftDown + target.gridH <= gridHeightLimit) {
+            candidates.push({ dir: 'down', dist: shiftDown, x: target.gridX, y: target.gridY + shiftDown });
+          }
+          if (target.gridX - shiftLeft >= 0) {
+            candidates.push({ dir: 'left', dist: shiftLeft, x: target.gridX - shiftLeft, y: target.gridY });
+          }
+          if (target.gridX + shiftRight + target.gridW <= gridWidthLimit) {
+            candidates.push({ dir: 'right', dist: shiftRight, x: target.gridX + shiftRight, y: target.gridY });
+          }
+
+          // 画面内に収まる逃げ道がある場合、移動距離(dist)が最も小さくて済む方向を選ぶ
+          if (candidates.length > 0) {
+            candidates.sort((a, b) => a.dist - b.dist);
+            const best = candidates[0];
+            target.gridX = best.x;
+            target.gridY = best.y;
+          } else {
+            // どの方向にも逃げ場がない場合の最終手段として、画面全体から最も近い空きスペースを全探索
+            const freePos = findFreeGridPosition(target.gridW, target.gridH, [target.id]);
+            target.gridX = freePos.x;
+            target.gridY = freePos.y;
+          }
+
+          changed = true;
+        }
+      }
+    }
+  }
 }
