@@ -74,6 +74,9 @@ let currentSuggestList = [];
 let activeSuggestIndex = -1;
 let originalInputText = '';
 
+// ショートカットドロワー開閉制御用
+let isShortcutDialogOpen = false;
+
 // -------------------------------------------------------------
 // IndexedDB 制御用 (ローカル動画の永続保存用)
 // -------------------------------------------------------------
@@ -169,7 +172,11 @@ const elements = {
   // 検索サジェスト
   searchForm: document.getElementById('search-form'),
   searchInput: document.getElementById('search-input'),
-  suggestList: document.getElementById('search-suggest-list')
+  suggestList: document.getElementById('search-suggest-list'),
+
+  // ショートカットドロワー
+  shortcutsDrawer: document.getElementById('shortcuts-drawer'),
+  drawerTrigger: document.getElementById('drawer-trigger')
 };
 
 // -------------------------------------------------------------
@@ -214,9 +221,10 @@ function applyAllSettings() {
   elements.showSearchCheckbox.checked = currentSettings.showSearch;
 
   if (currentSettings.showShortcuts) {
-    elements.shortcutsSection.classList.remove('hidden');
+    elements.drawerTrigger.classList.remove('hidden');
   } else {
-    elements.shortcutsSection.classList.add('hidden');
+    elements.drawerTrigger.classList.add('hidden');
+    elements.shortcutsDrawer.classList.remove('open');
   }
   elements.showShortcutsCheckbox.checked = currentSettings.showShortcuts;
 
@@ -453,9 +461,10 @@ function initEventListeners() {
     currentSettings.showShortcuts = checked;
     storage.set({ showShortcuts: checked });
     if (checked) {
-      elements.shortcutsSection.classList.remove('hidden');
+      elements.drawerTrigger.classList.remove('hidden');
     } else {
-      elements.shortcutsSection.classList.add('hidden');
+      elements.drawerTrigger.classList.add('hidden');
+      elements.shortcutsDrawer.classList.remove('open');
     }
   });
 
@@ -513,6 +522,15 @@ function initEventListeners() {
         !elements.suggestList.contains(e.target) && 
         e.target !== elements.searchInput) {
       elements.suggestList.classList.add('hidden');
+    }
+  });
+
+  // --- 4.13. ショートカットドロワーのホバー開閉制御 ---
+  elements.drawerTrigger.addEventListener('mouseenter', openShortcutsDrawer);
+  elements.shortcutsDrawer.addEventListener('mouseenter', openShortcutsDrawer);
+  elements.shortcutsDrawer.addEventListener('mouseleave', () => {
+    if (!isShortcutDialogOpen) {
+      closeShortcutsDrawer();
     }
   });
 }
@@ -607,6 +625,9 @@ function renderShortcuts() {
 
 // ショートカット追加・編集ダイアログを開く
 function openShortcutDialog(index = -1) {
+  isShortcutDialogOpen = true; // ダイアログ展開中はドロワーを閉じない
+  elements.shortcutsDrawer.classList.add('open');
+
   editingShortcutIndex = index;
   if (index === -1) {
     elements.dialogTitle.textContent = 'ショートカットを追加';
@@ -626,6 +647,10 @@ function openShortcutDialog(index = -1) {
 function closeShortcutDialog() {
   elements.shortcutDialog.classList.add('hidden');
   editingShortcutIndex = -1;
+  isShortcutDialogOpen = false; // ロックを解除
+  
+  // マウスがドロワー外なら閉じる
+  closeShortcutsDrawer();
 }
 
 // ショートカットを削除
@@ -900,4 +925,16 @@ function escapeHtml(string) {
     };
     return escapeMap[match];
   });
+}
+
+// ドロワーを開く
+function openShortcutsDrawer() {
+  if (currentSettings.showShortcuts) {
+    elements.shortcutsDrawer.classList.add('open');
+  }
+}
+
+// ドロワーを閉じる
+function closeShortcutsDrawer() {
+  elements.shortcutsDrawer.classList.remove('open');
 }

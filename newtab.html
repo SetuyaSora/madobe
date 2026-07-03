@@ -33,13 +33,22 @@
       </form>
     </section>
 
-    <!-- クイックリンク（ショートカット）セクション -->
-    <section id="shortcuts-section" class="fade-in">
-      <div id="shortcuts-grid">
-        <!-- JSで動的にショートカットが追加されます -->
-      </div>
-    </section>
   </main>
+
+  <!-- 左端ホバー感知トリガー -->
+  <div id="drawer-trigger"></div>
+
+  <!-- ショートカットサイドドロワー -->
+  <aside id="shortcuts-drawer" class="closed">
+    <div class="drawer-header">
+      <h3>クイックリンク</h3>
+    </div>
+    <div class="drawer-content">
+      <div id="shortcuts-grid">
+        <!-- JSで動的にショートカットが描画されます -->
+      </div>
+    </div>
+  </aside>
 
   <!-- 右下設定ボタン -->
   <button id="settings-toggle" aria-label="設定を開く" class="icon-button">
