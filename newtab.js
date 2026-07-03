@@ -66,7 +66,7 @@ const DEFAULT_SETTINGS = {
       gridX: 7,
       gridY: 4,
       gridW: 10,
-      gridH: 3,
+      gridH: 1,
       settings: {}
     }
   ]
@@ -244,7 +244,7 @@ function applyAllSettings() {
       currentSettings.widgets.push({
         id: 'widget_search_default',
         type: 'search-bar',
-        gridX: 7, gridY: 4, gridW: 10, gridH: 3,
+        gridX: 7, gridY: 4, gridW: 10, gridH: 1,
         settings: {}
       });
     }
@@ -490,7 +490,7 @@ function initEventListeners() {
         currentSettings.widgets.push({
           id: 'widget_search_' + Date.now(),
           type: 'search-bar',
-          gridX: 7, gridY: 4, gridW: 10, gridH: 3,
+          gridX: 7, gridY: 4, gridW: 10, gridH: 1,
           settings: {}
         });
         saveWidgets();
@@ -1120,7 +1120,7 @@ function saveWidgets() {
 function getWidgetDefaultSize(type) {
   switch (type) {
     case 'search-bar':
-      return { w: 10, h: 3 };
+      return { w: 10, h: 1 };
     case 'digital-clock':
       return { w: 6, h: 3 };
     case 'analog-clock':
