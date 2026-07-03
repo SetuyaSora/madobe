@@ -191,6 +191,12 @@ const elements = {
   dialogCancelBtn: document.getElementById('dialog-cancel-btn'),
   dialogSaveBtn: document.getElementById('dialog-save-btn'),
 
+  // カスタム右クリックコンテキストメニュー
+  contextMenu: document.getElementById('widget-context-menu'),
+  widgetOpacityRange: document.getElementById('widget-opacity-range'),
+  widgetOpacityValue: document.getElementById('widget-opacity-value'),
+  widgetContextDeleteBtn: document.getElementById('widget-context-delete-btn'),
+
   // 検索サジェスト
   searchForm: document.getElementById('search-form'),
   searchInput: document.getElementById('search-input'),
@@ -619,6 +625,71 @@ function initEventListeners() {
       longPressTimer = null;
     }
   });
+
+  // --- 4.18. カスタム右クリックコンテキストメニューのイベント ---
+  document.addEventListener('contextmenu', (e) => {
+    const frame = e.target.closest('.widget-frame');
+    if (frame) {
+      e.preventDefault();
+      const widgetId = frame.dataset.id;
+      const widget = currentSettings.widgets.find(w => w.id === widgetId);
+      if (widget) {
+        activeMenuWidget = widget;
+        showContextMenu(e.clientX, e.clientY);
+      }
+    } else {
+      hideContextMenu();
+    }
+  });
+
+  // メニュー外左クリックでメニューを閉じる
+  document.addEventListener('click', (e) => {
+    if (elements.contextMenu && !elements.contextMenu.classList.contains('hidden')) {
+      if (!elements.contextMenu.contains(e.target)) {
+        hideContextMenu();
+      }
+    }
+  });
+
+  // スライダー操作による不透明度リアルタイム更新
+  if (elements.widgetOpacityRange) {
+    elements.widgetOpacityRange.addEventListener('input', (e) => {
+      if (!activeMenuWidget) return;
+      const opacity = parseInt(e.target.value);
+      elements.widgetOpacityValue.textContent = opacity;
+
+      if (!activeMenuWidget.settings) activeMenuWidget.settings = {};
+      activeMenuWidget.settings.opacity = opacity;
+
+      const frame = document.querySelector(`[data-id="${activeMenuWidget.id}"]`);
+      if (frame) {
+        applyWidgetOpacityStyle(frame, activeMenuWidget, opacity);
+      }
+    });
+
+    elements.widgetOpacityRange.addEventListener('change', () => {
+      saveWidgets();
+    });
+  }
+
+  // メニュー内削除ボタン
+  if (elements.widgetContextDeleteBtn) {
+    elements.widgetContextDeleteBtn.addEventListener('click', () => {
+      if (!activeMenuWidget) return;
+
+      currentSettings.widgets = currentSettings.widgets.filter(w => w.id !== activeMenuWidget.id);
+
+      if (activeMenuWidget.type === 'search-bar') {
+        currentSettings.showSearch = false;
+        storage.set({ showSearch: false });
+        elements.showSearchCheckbox.checked = false;
+      }
+
+      saveWidgets();
+      renderWidgets();
+      hideContextMenu();
+    });
+  }
 
   // --- 4.14. ウィジェットドロワーのタブ切り替え ---
   elements.drawerTabBtns.forEach(btn => {
@@ -1547,6 +1618,10 @@ function renderWidgets() {
     makeWidgetDraggable(frame, widget);
     makeWidgetResizable(frame, widget);
 
+    // 個別不透明度の初期適用
+    const opacity = (widget.settings && widget.settings.opacity !== undefined) ? widget.settings.opacity : 55;
+    applyWidgetOpacityStyle(frame, widget, opacity);
+
     elements.widgetsLayer.appendChild(frame);
   });
 
@@ -1600,6 +1675,7 @@ function enterEditMode() {
   if (isEditMode) return;
   isEditMode = true;
   document.body.classList.add('edit-mode');
+  updateAllWidgetsOpacityStyles();
 }
 
 // 編集モードを終了する
@@ -1607,6 +1683,7 @@ function exitEditMode() {
   if (!isEditMode) return;
   isEditMode = false;
   document.body.classList.remove('edit-mode');
+  updateAllWidgetsOpacityStyles();
 }
 
 // --- 衝突検知と回避・位置入れ替え (スワップ) アルゴリズム ---
@@ -1732,6 +1809,92 @@ function updateWidgetsPositionsOnly() {
       frame.style.top = (widget.gridY / 12) * 100 + '%';
       frame.style.width = (widget.gridW / 24) * 100 + '%';
       frame.style.height = (widget.gridH / 12) * 100 + '%';
+    }
+  });
+}
+
+// --- 4.19. 右クリックコンテキストメニュー表示とスタイル適用のロジック ---
+let activeMenuWidget = null;
+
+// コンテキストメニューを非表示にする
+function hideContextMenu() {
+  if (elements.contextMenu) {
+    elements.contextMenu.classList.add('hidden');
+  }
+  activeMenuWidget = null;
+}
+
+// コンテキストメニューを表示する（はみ出し自動調整付き）
+function showContextMenu(clientX, clientY) {
+  if (!elements.contextMenu) return;
+
+  // 現在の不透明度を設定
+  const opacity = (activeMenuWidget.settings && activeMenuWidget.settings.opacity !== undefined)
+    ? activeMenuWidget.settings.opacity
+    : 55;
+  
+  elements.widgetOpacityRange.value = opacity;
+  elements.widgetOpacityValue.textContent = opacity;
+
+  elements.contextMenu.classList.remove('hidden');
+
+  // はみ出し補正のためにメニューの実サイズを取得
+  const menuWidth = elements.contextMenu.offsetWidth || 200;
+  const menuHeight = elements.contextMenu.offsetHeight || 120;
+  const windowWidth = window.innerWidth;
+  const windowHeight = window.innerHeight;
+
+  let x = clientX;
+  let y = clientY;
+
+  // 右端からはみ出る場合
+  if (x + menuWidth > windowWidth) {
+    x = windowWidth - menuWidth - 10;
+  }
+  // 下端からはみ出る場合
+  if (y + menuHeight > windowHeight) {
+    y = windowHeight - menuHeight - 10;
+  }
+
+  elements.contextMenu.style.left = `${x}px`;
+  elements.contextMenu.style.top = `${y}px`;
+}
+
+// 個別不透明度の適用ヘルパー
+function applyWidgetOpacityStyle(frame, widget, opacity) {
+  const isEdit = document.body.classList.contains('edit-mode');
+  
+  // 編集モード（edit-mode）中は、操作枠や角線をわかりやすく保つため最低30%の不透明度を維持する
+  const targetOpacity = isEdit ? Math.max(30, opacity) : opacity;
+
+  if (targetOpacity === 0) {
+    frame.style.background = 'transparent';
+    frame.style.backdropFilter = 'none';
+    frame.style.webkitBackdropFilter = 'none';
+    frame.style.border = isEdit ? '1px solid var(--border-glass)' : '1px solid transparent';
+    frame.style.boxShadow = 'none';
+  } else {
+    const alpha = targetOpacity / 100;
+    frame.style.background = `rgba(15, 15, 20, ${alpha * 0.75})`; // 暗色すりガラス
+    frame.style.backdropFilter = `blur(${16 * alpha}px) saturate(180%)`;
+    frame.style.webkitBackdropFilter = `blur(${16 * alpha}px) saturate(180%)`;
+    frame.style.border = isEdit ? '1px solid var(--border-glass)' : '1px solid transparent';
+    
+    if (!isEdit) {
+      frame.style.boxShadow = targetOpacity > 15 ? `0 8px 32px 0 rgba(0, 0, 0, ${alpha * 0.25})` : 'none';
+    } else {
+      frame.style.boxShadow = `0 8px 32px 0 rgba(0, 0, 0, 0.3)`;
+    }
+  }
+}
+
+// 全ウィジェットの不透明度スタイルを一括更新する（編集モードの出入り時に使用）
+function updateAllWidgetsOpacityStyles() {
+  currentSettings.widgets.forEach(widget => {
+    const frame = document.querySelector(`[data-id="${widget.id}"]`);
+    if (frame) {
+      const opacity = (widget.settings && widget.settings.opacity !== undefined) ? widget.settings.opacity : 55;
+      applyWidgetOpacityStyle(frame, widget, opacity);
     }
   });
 }

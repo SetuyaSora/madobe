@@ -1509,3 +1509,140 @@ body.edit-mode .widget-type-search-bar .widget-header {
 .widget-type-search-bar #search-suggest-list {
   z-index: 9999 !important; /* 他のウィジェットの手前に確実に表示 */
 }
+
+/* =============================================================
+   6. カスタムコンテキストメニュー (右クリック調整)
+   ============================================================= */
+.context-menu {
+  position: absolute;
+  z-index: 10000;
+  width: 200px;
+  background: rgba(20, 20, 25, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  padding: 10px;
+  opacity: 1;
+  transform: scale(1);
+  transition: opacity 0.15s ease, transform 0.15s ease;
+  animation: context-menu-fade-in 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes context-menu-fade-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.context-menu.hidden {
+  display: none;
+}
+
+.context-menu-header {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  letter-spacing: 0.8px;
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
+.context-menu-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 4px;
+}
+
+.context-menu-item.slider-item {
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* スライダー全体の極細モダンデザイン */
+#widget-opacity-range {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  background: rgba(255, 255, 255, 0.1);
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+}
+
+#widget-opacity-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent-color);
+  cursor: pointer;
+  box-shadow: 0 0 10px var(--accent-glow);
+  transition: transform 0.1s ease;
+}
+
+#widget-opacity-range::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+.opacity-value-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  min-width: 32px;
+  text-align: right;
+}
+
+.context-menu-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 8px 0;
+}
+
+.context-menu-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  padding: 8px 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  text-align: left;
+  transition: var(--transition-smooth);
+}
+
+.context-menu-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.context-menu-btn.danger {
+  color: rgba(239, 68, 68, 0.85);
+}
+
+.context-menu-btn.danger:hover {
+  color: #fff;
+  background: rgba(239, 68, 68, 0.8);
+}
+
+.menu-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
