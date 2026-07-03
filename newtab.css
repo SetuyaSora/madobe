@@ -98,6 +98,8 @@ body {
   width: 100%;
   max-width: 600px;
   margin-bottom: 40px;
+  position: relative;
+  z-index: 10; /* ショートカットより手前に重ねる */
 }
 
 #search-form {
