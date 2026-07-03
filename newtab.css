@@ -1076,7 +1076,7 @@ select option {
   left: 0;
   width: 100vw;
   height: 100vh;
-  z-index: 1; /* 背景と検索バーの間 */
+  z-index: 5; /* 検索バー (z-index 2) の上に引き上げ、DnDイベントを確実にキャッチ */
   pointer-events: none; /* 下の要素のクリックを阻害しない */
   user-select: none;
 }
