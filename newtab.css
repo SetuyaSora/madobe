@@ -1393,3 +1393,44 @@ body.dragging-widget #widgets-layer {
   background: rgba(255, 255, 255, 0.1);
   border-radius: 1.5px;
 }
+
+/* 5. 検索バーウィジェット固有のスタイル */
+.widget-frame.widget-type-search-bar {
+  overflow: visible !important; /* サジェストリストを外枠からはみ出して表示させる */
+  background: rgba(15, 15, 20, 0.45); /* 検索バーは少し軽めの透過背景 */
+}
+
+.widget-type-search-bar .widget-body {
+  padding: 10px 14px;
+  justify-content: center;
+  overflow: visible !important;
+}
+
+.widget-type-search-bar #search-form {
+  width: 100%;
+  position: relative;
+}
+
+.widget-type-search-bar .search-input-wrapper {
+  width: 100%;
+  border-radius: 20px;
+  padding: 6px 14px;
+  background: rgba(255, 255, 255, 0.05);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.widget-type-search-bar #search-input {
+  font-size: 14px;
+  padding: 4px 0;
+}
+
+.widget-type-search-bar .search-icon {
+  width: 16px;
+  height: 16px;
+  margin-right: 10px;
+}
+
+/* サジェストリストのスタッキング優先度 */
+.widget-type-search-bar #search-suggest-list {
+  z-index: 9999 !important; /* 他のウィジェットの手前に確実に表示 */
+}

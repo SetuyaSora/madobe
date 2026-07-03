@@ -59,7 +59,17 @@ const DEFAULT_SETTINGS = {
   showSearch: true,
   showShortcuts: true,
   shortcuts: DEFAULT_SHORTCUTS,
-  widgets: [] // { id, type, gridX, gridY, gridW, gridH, settings: { text: '' } }
+  widgets: [
+    {
+      id: 'widget_search_default',
+      type: 'search-bar',
+      gridX: 7,
+      gridY: 4,
+      gridW: 10,
+      gridH: 3,
+      settings: {}
+    }
+  ]
 };
 
 // 現在の設定保持用
@@ -220,12 +230,20 @@ function applyAllSettings() {
   elements.opacityValue.textContent = `${currentSettings.overlayOpacity}%`;
 
   // 5. 表示項目トグル適用
-  if (currentSettings.showSearch) {
-    elements.searchSection.classList.remove('hidden');
-  } else {
-    elements.searchSection.classList.add('hidden');
-  }
   elements.showSearchCheckbox.checked = currentSettings.showSearch;
+  if (currentSettings.showSearch) {
+    const hasSearch = currentSettings.widgets.some(w => w.type === 'search-bar');
+    if (!hasSearch) {
+      currentSettings.widgets.push({
+        id: 'widget_search_default',
+        type: 'search-bar',
+        gridX: 7, gridY: 4, gridW: 10, gridH: 3,
+        settings: {}
+      });
+    }
+  } else {
+    currentSettings.widgets = currentSettings.widgets.filter(w => w.type !== 'search-bar');
+  }
 
   if (currentSettings.showShortcuts) {
     elements.drawerTrigger.classList.remove('hidden');
@@ -454,15 +472,27 @@ function initEventListeners() {
     storage.set({ speed: speed });
   });
 
-  // --- 4.9. 表示トグル (検索バー) ---
+  // --- 4.9. 表示トグル (検索) ---
   elements.showSearchCheckbox.addEventListener('change', (e) => {
     const checked = e.target.checked;
     currentSettings.showSearch = checked;
     storage.set({ showSearch: checked });
     if (checked) {
-      elements.searchSection.classList.remove('hidden');
+      const hasSearch = currentSettings.widgets.some(w => w.type === 'search-bar');
+      if (!hasSearch) {
+        currentSettings.widgets.push({
+          id: 'widget_search_' + Date.now(),
+          type: 'search-bar',
+          gridX: 7, gridY: 4, gridW: 10, gridH: 3,
+          settings: {}
+        });
+        saveWidgets();
+        renderWidgets();
+      }
     } else {
-      elements.searchSection.classList.add('hidden');
+      currentSettings.widgets = currentSettings.widgets.filter(w => w.type !== 'search-bar');
+      saveWidgets();
+      renderWidgets();
     }
   });
 
@@ -517,21 +547,34 @@ function initEventListeners() {
     }
   });
 
-  // --- 4.12. 検索サジェストイベントの監視 ---
-  elements.searchInput.addEventListener('input', handleSearchInput);
-  elements.searchInput.addEventListener('keydown', handleSearchKeydown);
-  elements.searchInput.addEventListener('focus', () => {
-    const query = elements.searchInput.value.trim();
-    if (query) {
-      updateSuggestList(query);
+  // --- 4.12. 検索サジェストイベントの監視 (イベント委譲) ---
+  document.addEventListener('input', (e) => {
+    if (e.target.id === 'search-input') {
+      handleSearchInput(e);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.target.id === 'search-input') {
+      handleSearchKeydown(e);
+    }
+  });
+
+  document.addEventListener('focusin', (e) => {
+    if (e.target.id === 'search-input') {
+      const query = e.target.value.trim();
+      if (query) {
+        updateSuggestList(query);
+      }
     }
   });
 
   // サジェストリスト以外のクリックでリストを閉じる
   document.addEventListener('click', (e) => {
-    if (!elements.suggestList.classList.contains('hidden') && 
+    if (elements.suggestList && 
+        !elements.suggestList.classList.contains('hidden') && 
         !elements.suggestList.contains(e.target) && 
-        e.target !== elements.searchInput) {
+        e.target.id !== 'search-input') {
       elements.suggestList.classList.add('hidden');
     }
   });
@@ -1048,6 +1091,8 @@ function saveWidgets() {
 // ウィジェットのデフォルトサイズを取得
 function getWidgetDefaultSize(type) {
   switch (type) {
+    case 'search-bar':
+      return { w: 10, h: 3 };
     case 'digital-clock':
       return { w: 6, h: 3 };
     case 'analog-clock':
@@ -1319,7 +1364,18 @@ function renderWidgets() {
     let title = 'ウィジェット';
     let bodyHtml = '';
 
-    if (widget.type === 'digital-clock') {
+    if (widget.type === 'search-bar') {
+      title = 'Google 検索';
+      bodyHtml = `
+        <form id="search-form" action="https://www.google.com/search" method="get">
+          <div class="search-input-wrapper">
+            <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" name="q" id="search-input" placeholder="Google で検索..." autocomplete="off">
+          </div>
+          <ul id="search-suggest-list" class="hidden"></ul>
+        </form>
+      `;
+    } else if (widget.type === 'digital-clock') {
       title = 'デジタル時計';
       bodyHtml = `
         <div class="widget-digital-clock">
@@ -1367,9 +1423,27 @@ function renderWidgets() {
     // 削除ボタンのバインド
     frame.querySelector('.widget-close-btn').addEventListener('click', () => {
       currentSettings.widgets = currentSettings.widgets.filter(w => w.id !== widget.id);
+      
+      // 検索バーが削除された場合、表示チェックボックスをOFFに同期
+      if (widget.type === 'search-bar') {
+        currentSettings.showSearch = false;
+        storage.set({ showSearch: false });
+        elements.showSearchCheckbox.checked = false;
+      }
+      
       saveWidgets();
       renderWidgets();
     });
+
+    // 検索バーのキャッシュ更新＆ドロワーロック
+    if (widget.type === 'search-bar') {
+      elements.searchForm = frame.querySelector('#search-form');
+      elements.searchInput = frame.querySelector('#search-input');
+      elements.suggestList = frame.querySelector('#search-suggest-list');
+
+      elements.searchInput.addEventListener('focus', () => { isShortcutDialogOpen = true; });
+      elements.searchInput.addEventListener('blur', () => { isShortcutDialogOpen = false; closeShortcutsDrawer(); });
+    }
 
     // メモ帳のテキスト保存＆ドロワーロック制御
     if (widget.type === 'memo') {

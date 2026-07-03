@@ -23,19 +23,6 @@
 
   <!-- メインコンテンツコンテナ -->
   <main id="main-content">
-    <!-- 検索セクション -->
-    <section id="search-section" class="fade-in">
-      <form id="search-form" action="https://www.google.com/search" method="get">
-        <div class="search-input-wrapper">
-          <!-- 検索アイコン (SVG) -->
-          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-          <input type="text" name="q" id="search-input" placeholder="Google で検索..." autocomplete="off" autofocus>
-        </div>
-        <!-- 検索サジェストリスト -->
-        <ul id="search-suggest-list" class="hidden"></ul>
-      </form>
-    </section>
-
   </main>
 
   <!-- 左端ホバー感知トリガー -->
@@ -61,6 +48,14 @@
     <div id="tab-content-widgets" class="tab-content-wrapper hidden">
       <div class="drawer-content">
         <div class="widgets-list">
+          <!-- Google検索見本 -->
+          <div class="widget-sample-card" draggable="true" data-widget-type="search-bar">
+            <svg class="sample-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <div class="sample-info">
+              <h4>Google検索</h4>
+              <p>サジェスト機能付きのGoogle検索バー</p>
+            </div>
+          </div>
           <!-- デジタル時計見本 -->
           <div class="widget-sample-card" draggable="true" data-widget-type="digital-clock">
             <svg class="sample-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
