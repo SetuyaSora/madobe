@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新しいタブ</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="newtab.css">
+</head>
+<body>
+
+  <!-- 背景動画 -->
+  <video id="bg-video" autoplay loop muted playsinline will-change="transform"></video>
+  
+  <!-- 動画の明るさを調整するオーバーレイ -->
+  <div id="bg-overlay"></div>
+
+  <!-- メインコンテンツコンテナ -->
+  <main id="main-content">
+    <!-- 検索セクション -->
+    <section id="search-section" class="fade-in">
+      <form id="search-form" action="https://www.google.com/search" method="get">
+        <div class="search-input-wrapper">
+          <!-- 検索アイコン (SVG) -->
+          <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          <input type="text" name="q" id="search-input" placeholder="Google で検索..." autocomplete="off" autofocus>
+        </div>
+      </form>
+    </section>
+
+    <!-- クイックリンク（ショートカット）セクション -->
+    <section id="shortcuts-section" class="fade-in">
+      <div id="shortcuts-grid">
+        <!-- JSで動的にショートカットが追加されます -->
+      </div>
+    </section>
+  </main>
+
+  <!-- 右下設定ボタン -->
+  <button id="settings-toggle" aria-label="設定を開く" class="icon-button">
+    <!-- 設定アイコン (SVG) -->
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+  </button>
+
+  <!-- 設定パネル (モーダル風オーバーレイ) -->
+  <div id="settings-panel" class="hidden">
+    <div class="settings-header">
+      <h2>設定</h2>
+      <button id="settings-close" aria-label="設定を閉じる" class="icon-button-small">
+        <!-- 閉じるアイコン (SVG) -->
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+      </button>
+    </div>
+    
+    <div class="settings-content">
+      <!-- 壁紙ソース設定 -->
+      <div class="settings-group">
+        <label class="group-title">壁紙ソース</label>
+        <div class="radio-group">
+          <label class="radio-label">
+            <input type="radio" name="video-source" value="default" checked>
+            <span>デフォルト動画</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="video-source" value="url">
+            <span>外部URL指定</span>
+          </label>
+          <label class="radio-label">
+            <input type="radio" name="video-source" value="file">
+            <span>ローカルファイル (一時的)</span>
+          </label>
+        </div>
+
+        <!-- 外部URL入力エリア -->
+        <div id="url-input-container" class="settings-subgroup hidden">
+          <div class="input-with-button">
+            <input type="url" id="video-url-input" placeholder="https://example.com/video.mp4" autocomplete="off">
+            <button id="save-url-btn" class="text-button">適用</button>
+          </div>
+          <span class="help-text">Direct LinkのMP4/WebM等のURLを入力してください。</span>
+        </div>
+
+        <!-- ローカルファイル選択エリア -->
+        <div id="file-input-container" class="settings-subgroup hidden">
+          <label for="video-file-input" class="file-upload-label">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <span>動画ファイルを選択</span>
+          </label>
+          <input type="file" id="video-file-input" accept="video/mp4,video/webm,video/ogg">
+          <span class="warning-text">※ブラウザのセキュリティ制限により、このタブを閉じたりリロードするとデフォルトに戻ります。</span>
+        </div>
+      </div>
+
+      <!-- 壁紙表示調整 -->
+      <div class="settings-group">
+        <label class="group-title">壁紙表示設定</label>
+        
+        <div class="slider-row">
+          <span class="slider-label">暗度 (オーバーレイ不透明度)</span>
+          <div class="slider-wrapper">
+            <input type="range" id="opacity-slider" min="0" max="90" value="30">
+            <span id="opacity-value" class="slider-val-text">30%</span>
+          </div>
+        </div>
+
+        <div class="slider-row">
+          <span class="slider-label">音量 (デフォルトはミュート)</span>
+          <div class="slider-wrapper">
+            <input type="range" id="volume-slider" min="0" max="100" value="0">
+            <span id="volume-value" class="slider-val-text">0%</span>
+          </div>
+        </div>
+
+        <div class="select-row">
+          <span class="select-label">再生速度</span>
+          <select id="speed-select">
+            <option value="0.5">0.5x</option>
+            <option value="0.75">0.75x</option>
+            <option value="1.0" selected>1.0x (標準)</option>
+            <option value="1.25">1.25x</option>
+            <option value="1.5">1.5x</option>
+            <option value="2.0">2.0x</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- UI表示/非表示トグル -->
+      <div class="settings-group">
+        <label class="group-title">表示項目</label>
+        <div class="toggle-row">
+          <span>検索バーを表示</span>
+          <label class="switch">
+            <input type="checkbox" id="show-search-checkbox" checked>
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+        <div class="toggle-row">
+          <span>ショートカットを表示</span>
+          <label class="switch">
+            <input type="checkbox" id="show-shortcuts-checkbox" checked>
+            <span class="switch-slider"></span>
+          </label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ショートカット追加・編集用ダイアログ (設定パネルとは別) -->
+  <div id="shortcut-dialog" class="dialog-overlay hidden">
+    <div class="dialog-box">
+      <h3 id="dialog-title">ショートカットを追加</h3>
+      <div class="dialog-input-group">
+        <label for="shortcut-name-input">名前</label>
+        <input type="text" id="shortcut-name-input" placeholder="Google" autocomplete="off">
+      </div>
+      <div class="dialog-input-group">
+        <label for="shortcut-url-input">URL</label>
+        <input type="url" id="shortcut-url-input" placeholder="https://google.com" autocomplete="off">
+      </div>
+      <div class="dialog-actions">
+        <button id="dialog-cancel-btn" class="text-button-secondary">キャンセル</button>
+        <button id="dialog-save-btn" class="text-button">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="newtab.js"></script>
+</body>
+</html>
