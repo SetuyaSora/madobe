@@ -18,6 +18,9 @@
   <!-- 動画の明るさを調整するオーバーレイ -->
   <div id="bg-overlay"></div>
 
+  <!-- ウィジェット配置レイヤー -->
+  <div id="widgets-layer"></div>
+
   <!-- メインコンテンツコンテナ -->
   <main id="main-content">
     <!-- 検索セクション -->
@@ -40,12 +43,57 @@
 
   <!-- ショートカットサイドドロワー -->
   <aside id="shortcuts-drawer" class="closed">
-    <div class="drawer-header">
-      <h3>クイックリンク</h3>
+    <div class="drawer-tabs">
+      <button class="drawer-tab-btn active" data-tab="shortcuts">ショートカット</button>
+      <button class="drawer-tab-btn" data-tab="widgets">ウィジェット</button>
     </div>
-    <div class="drawer-content">
-      <div id="shortcuts-grid">
-        <!-- JSで動的にショートカットが描画されます -->
+    
+    <!-- ショートカットタブコンテンツ -->
+    <div id="tab-content-shortcuts" class="tab-content-wrapper">
+      <div class="drawer-content">
+        <div id="shortcuts-grid">
+          <!-- JSで動的にショートカットが描画されます -->
+        </div>
+      </div>
+    </div>
+
+    <!-- ウィジェットタブコンテンツ -->
+    <div id="tab-content-widgets" class="tab-content-wrapper hidden">
+      <div class="drawer-content">
+        <div class="widgets-list">
+          <!-- デジタル時計見本 -->
+          <div class="widget-sample-card" draggable="true" data-widget-type="digital-clock">
+            <svg class="sample-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+            <div class="sample-info">
+              <h4>デジタル時計</h4>
+              <p>日付と時刻を表示するシンプルな時計</p>
+            </div>
+          </div>
+          <!-- アナログ時計見本 -->
+          <div class="widget-sample-card" draggable="true" data-widget-type="analog-clock">
+            <svg class="sample-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="12" x2="12" y2="6"></line><line x1="12" y1="12" x2="15" y2="10"></line></svg>
+            <div class="sample-info">
+              <h4>アナログ時計</h4>
+              <p>美しい針のアナログ時計</p>
+            </div>
+          </div>
+          <!-- カレンダー見本 -->
+          <div class="widget-sample-card" draggable="true" data-widget-type="calendar">
+            <svg class="sample-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+            <div class="sample-info">
+              <h4>カレンダー</h4>
+              <p>今月の日程を表示するミニカレンダー</p>
+            </div>
+          </div>
+          <!-- メモ帳見本 -->
+          <div class="widget-sample-card" draggable="true" data-widget-type="memo">
+            <svg class="sample-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <div class="sample-info">
+              <h4>メモ帳</h4>
+              <p>付箋のようにテキストを記録・保存</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </aside>

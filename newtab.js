@@ -58,7 +58,8 @@ const DEFAULT_SETTINGS = {
   overlayOpacity: 30, // 0% - 90%
   showSearch: true,
   showShortcuts: true,
-  shortcuts: DEFAULT_SHORTCUTS
+  shortcuts: DEFAULT_SHORTCUTS,
+  widgets: [] // { id, type, gridX, gridY, gridW, gridH, settings: { text: '' } }
 };
 
 // 現在の設定保持用
@@ -176,7 +177,13 @@ const elements = {
 
   // ショートカットドロワー
   shortcutsDrawer: document.getElementById('shortcuts-drawer'),
-  drawerTrigger: document.getElementById('drawer-trigger')
+  drawerTrigger: document.getElementById('drawer-trigger'),
+
+  // ウィジェット関連
+  widgetsLayer: document.getElementById('widgets-layer'),
+  drawerTabBtns: document.querySelectorAll('.drawer-tab-btn'),
+  tabContentWrappers: document.querySelectorAll('.tab-content-wrapper'),
+  widgetSampleCards: document.querySelectorAll('.widget-sample-card')
 };
 
 // -------------------------------------------------------------
@@ -237,6 +244,10 @@ function applyAllSettings() {
 
   // 7. ショートカットの描画
   renderShortcuts();
+
+  // 8. ウィジェットの描画とタイマー開始
+  renderWidgets();
+  initWidgetsTimer();
 }
 
 // 壁紙ソースの読み込みと適用
@@ -532,6 +543,84 @@ function initEventListeners() {
     if (!isShortcutDialogOpen) {
       closeShortcutsDrawer();
     }
+  });
+
+  // --- 4.14. ウィジェットドロワーのタブ切り替え ---
+  elements.drawerTabBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      const tabName = btn.dataset.tab;
+      elements.drawerTabBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      elements.tabContentWrappers.forEach(wrapper => {
+        if (wrapper.id === `tab-content-${tabName}`) {
+          wrapper.classList.remove('hidden');
+        } else {
+          wrapper.classList.add('hidden');
+        }
+      });
+    });
+  });
+
+  // --- 4.15. ウィジェット見本のドラッグ開始・終了 ---
+  elements.widgetSampleCards.forEach(card => {
+    card.addEventListener('dragstart', (e) => {
+      e.dataTransfer.setData('text/plain', card.dataset.widgetType);
+      isShortcutDialogOpen = true; // ドラッグ中はドロワーを閉じない
+    });
+    card.addEventListener('dragend', () => {
+      isShortcutDialogOpen = false;
+      closeShortcutsDrawer();
+    });
+  });
+
+  // --- 4.16. ウィジェット配置レイヤーへのドロップ制御 ---
+  elements.widgetsLayer.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    updateSnapPreview(e.clientX, e.clientY, getWidgetDefaultSize('digital-clock'));
+  });
+
+  elements.widgetsLayer.addEventListener('dragleave', () => {
+    removeSnapPreview();
+  });
+
+  elements.widgetsLayer.addEventListener('drop', (e) => {
+    e.preventDefault();
+    removeSnapPreview();
+    const type = e.dataTransfer.getData('text/plain');
+    if (!type) return;
+
+    const rect = elements.widgetsLayer.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const cellW = rect.width / 24;
+    const cellH = rect.height / 12;
+
+    let gridX = Math.floor(mouseX / cellW);
+    let gridY = Math.floor(mouseY / cellH);
+    const size = getWidgetDefaultSize(type);
+
+    if (gridX + size.w > 24) gridX = 24 - size.w;
+    if (gridY + size.h > 12) gridY = 12 - size.h;
+    if (gridX < 0) gridX = 0;
+    if (gridY < 0) gridY = 0;
+
+    const newWidget = {
+      id: 'widget_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+      type: type,
+      gridX: gridX,
+      gridY: gridY,
+      gridW: size.w,
+      gridH: size.h,
+      settings: {}
+    };
+
+    if (!currentSettings.widgets) {
+      currentSettings.widgets = [];
+    }
+    currentSettings.widgets.push(newWidget);
+    saveWidgets();
+    renderWidgets();
   });
 }
 
@@ -937,4 +1026,404 @@ function openShortcutsDrawer() {
 // ドロワーを閉じる
 function closeShortcutsDrawer() {
   elements.shortcutsDrawer.classList.remove('open');
+}
+
+// -------------------------------------------------------------
+// 6. ウィジェット管理システムの実装
+// -------------------------------------------------------------
+let widgetsGlobalTimer = null;
+let dragPreviewEl = null;
+
+// ウィジェットの保存
+function saveWidgets() {
+  storage.set({ widgets: currentSettings.widgets });
+}
+
+// ウィジェットのデフォルトサイズを取得
+function getWidgetDefaultSize(type) {
+  switch (type) {
+    case 'digital-clock':
+      return { w: 6, h: 3 };
+    case 'analog-clock':
+      return { w: 4, h: 4 };
+    case 'calendar':
+      return { w: 6, h: 5 };
+    case 'memo':
+      return { w: 5, h: 4 };
+    default:
+      return { w: 4, h: 3 };
+  }
+}
+
+// グリッド配置スナッププレビューの更新
+function updateSnapPreview(clientX, clientY, size) {
+  const rect = elements.widgetsLayer.getBoundingClientRect();
+  const mouseX = clientX - rect.left;
+  const mouseY = clientY - rect.top;
+
+  const cellW = rect.width / 24;
+  const cellH = rect.height / 12;
+
+  let gridX = Math.floor(mouseX / cellW);
+  let gridY = Math.floor(mouseY / cellH);
+
+  if (gridX + size.w > 24) gridX = 24 - size.w;
+  if (gridY + size.h > 12) gridY = 12 - size.h;
+  if (gridX < 0) gridX = 0;
+  if (gridY < 0) gridY = 0;
+
+  if (!dragPreviewEl) {
+    dragPreviewEl = document.createElement('div');
+    dragPreviewEl.className = 'widget-snap-preview';
+    elements.widgetsLayer.appendChild(dragPreviewEl);
+  }
+
+  dragPreviewEl.style.left = (gridX / 24) * 100 + '%';
+  dragPreviewEl.style.top = (gridY / 12) * 100 + '%';
+  dragPreviewEl.style.width = (size.w / 24) * 100 + '%';
+  dragPreviewEl.style.height = (size.h / 12) * 100 + '%';
+  dragPreviewEl.style.display = 'block';
+}
+
+// プレビューの削除
+function removeSnapPreview() {
+  if (dragPreviewEl) {
+    dragPreviewEl.remove();
+    dragPreviewEl = null;
+  }
+}
+
+// ウィジェットのドラッグ移動制御
+function makeWidgetDraggable(widgetFrame, widgetData) {
+  const header = widgetFrame.querySelector('.widget-header');
+  header.addEventListener('mousedown', (e) => {
+    if (e.target.closest('.widget-close-btn')) return;
+    e.preventDefault();
+
+    widgetFrame.classList.add('dragging');
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const initialGridX = widgetData.gridX;
+    const initialGridY = widgetData.gridY;
+
+    const layerRect = elements.widgetsLayer.getBoundingClientRect();
+    const cellW = layerRect.width / 24;
+    const cellH = layerRect.height / 12;
+
+    // スナッププレビュー作成
+    const preview = document.createElement('div');
+    preview.className = 'widget-snap-preview';
+    preview.style.left = (widgetData.gridX / 24) * 100 + '%';
+    preview.style.top = (widgetData.gridY / 12) * 100 + '%';
+    preview.style.width = (widgetData.gridW / 24) * 100 + '%';
+    preview.style.height = (widgetData.gridH / 12) * 100 + '%';
+    elements.widgetsLayer.appendChild(preview);
+
+    let currentGridX = initialGridX;
+    let currentGridY = initialGridY;
+
+    function onMouseMove(moveEvent) {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+
+      const gridDeltaX = Math.round(deltaX / cellW);
+      const gridDeltaY = Math.round(deltaY / cellH);
+
+      let nextGridX = initialGridX + gridDeltaX;
+      let nextGridY = initialGridY + gridDeltaY;
+
+      if (nextGridX < 0) nextGridX = 0;
+      if (nextGridY < 0) nextGridY = 0;
+      if (nextGridX + widgetData.gridW > 24) nextGridX = 24 - widgetData.gridW;
+      if (nextGridY + widgetData.gridH > 12) nextGridY = 12 - widgetData.gridH;
+
+      currentGridX = nextGridX;
+      currentGridY = nextGridY;
+
+      preview.style.left = (currentGridX / 24) * 100 + '%';
+      preview.style.top = (currentGridY / 12) * 100 + '%';
+
+      widgetFrame.style.left = (currentGridX / 24) * 100 + '%';
+      widgetFrame.style.top = (currentGridY / 12) * 100 + '%';
+    }
+
+    function onMouseUp() {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+
+      widgetFrame.classList.remove('dragging');
+      preview.remove();
+
+      widgetData.gridX = currentGridX;
+      widgetData.gridY = currentGridY;
+
+      saveWidgets();
+      renderWidgets();
+    }
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  });
+}
+
+// ウィジェットのリサイズ制御
+function makeWidgetResizable(widgetFrame, widgetData) {
+  const handle = widgetFrame.querySelector('.widget-resize-handle');
+  handle.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    widgetFrame.classList.add('resizing');
+
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const initialGridW = widgetData.gridW;
+    const initialGridH = widgetData.gridH;
+
+    const layerRect = elements.widgetsLayer.getBoundingClientRect();
+    const cellW = layerRect.width / 24;
+    const cellH = layerRect.height / 12;
+
+    const preview = document.createElement('div');
+    preview.className = 'widget-snap-preview';
+    preview.style.left = (widgetData.gridX / 24) * 100 + '%';
+    preview.style.top = (widgetData.gridY / 12) * 100 + '%';
+    preview.style.width = (widgetData.gridW / 24) * 100 + '%';
+    preview.style.height = (widgetData.gridH / 12) * 100 + '%';
+    elements.widgetsLayer.appendChild(preview);
+
+    let currentGridW = initialGridW;
+    let currentGridH = initialGridH;
+
+    function onMouseMove(moveEvent) {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaY = moveEvent.clientY - startY;
+
+      const gridDeltaW = Math.round(deltaX / cellW);
+      const gridDeltaH = Math.round(deltaY / cellH);
+
+      let nextGridW = initialGridW + gridDeltaW;
+      let nextGridH = initialGridH + gridDeltaH;
+
+      if (nextGridW < 2) nextGridW = 2;
+      if (nextGridH < 2) nextGridH = 2;
+
+      if (widgetData.gridX + nextGridW > 24) nextGridW = 24 - widgetData.gridX;
+      if (widgetData.gridY + nextGridH > 12) nextGridH = 12 - widgetData.gridY;
+
+      currentGridW = nextGridW;
+      currentGridH = nextGridH;
+
+      preview.style.width = (currentGridW / 24) * 100 + '%';
+      preview.style.height = (currentGridH / 12) * 100 + '%';
+
+      widgetFrame.style.width = (currentGridW / 24) * 100 + '%';
+      widgetFrame.style.height = (currentGridH / 12) * 100 + '%';
+    }
+
+    function onMouseUp() {
+      document.removeEventListener('mousemove', onMouseMove);
+      document.removeEventListener('mouseup', onMouseUp);
+
+      widgetFrame.classList.remove('resizing');
+      preview.remove();
+
+      widgetData.gridW = currentGridW;
+      widgetData.gridH = currentGridH;
+
+      saveWidgets();
+      renderWidgets();
+    }
+
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup', onMouseUp);
+  });
+}
+
+// カレンダーのHTML生成
+function generateCalendarHtml() {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = now.getMonth();
+  const today = now.getDate();
+
+  const monthNames = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+  const firstDay = new Date(year, month, 1).getDay();
+  const lastDate = new Date(year, month + 1, 0).getDate();
+
+  let html = `
+    <div class="widget-calendar">
+      <div class="calendar-month-year">${year}年 ${monthNames[month]}</div>
+      <table class="calendar-table">
+        <thead>
+          <tr>
+            <th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th>
+          </tr>
+        </thead>
+        <tbody>
+  `;
+
+  let date = 1;
+  for (let i = 0; i < 6; i++) {
+    html += '<tr>';
+    for (let j = 0; j < 7; j++) {
+      if (i === 0 && j < firstDay) {
+        html += '<td class="other-month"></td>';
+      } else if (date > lastDate) {
+        html += '<td class="other-month"></td>';
+      } else {
+        const isToday = date === today;
+        html += `<td class="${isToday ? 'today-cell' : ''}">${date}</td>`;
+        date++;
+      }
+    }
+    html += '</tr>';
+    if (date > lastDate) break;
+  }
+
+  html += `
+        </tbody>
+      </table>
+    </div>
+  `;
+  return html;
+}
+
+// 全ウィジェットの描画
+function renderWidgets() {
+  elements.widgetsLayer.innerHTML = '';
+
+  if (!currentSettings.widgets) {
+    currentSettings.widgets = [];
+  }
+
+  currentSettings.widgets.forEach(widget => {
+    const frame = document.createElement('div');
+    frame.className = `widget-frame widget-type-${widget.type}`;
+    frame.dataset.id = widget.id;
+
+    // レスポンシブな絶対配置 (24x12)
+    frame.style.left = (widget.gridX / 24) * 100 + '%';
+    frame.style.top = (widget.gridY / 12) * 100 + '%';
+    frame.style.width = (widget.gridW / 24) * 100 + '%';
+    frame.style.height = (widget.gridH / 12) * 100 + '%';
+
+    // タイトルの設定
+    let title = 'ウィジェット';
+    let bodyHtml = '';
+
+    if (widget.type === 'digital-clock') {
+      title = 'デジタル時計';
+      bodyHtml = `
+        <div class="widget-digital-clock">
+          <div class="clock-time">00:00:00</div>
+          <div class="clock-date">0000年00月00日</div>
+        </div>
+      `;
+    } else if (widget.type === 'analog-clock') {
+      title = 'アナログ時計';
+      bodyHtml = `
+        <div class="widget-analog-clock">
+          <div class="analog-clock-face">
+            <div class="clock-hand hour"></div>
+            <div class="clock-hand minute"></div>
+            <div class="clock-hand second"></div>
+            <div class="clock-center-dot"></div>
+          </div>
+        </div>
+      `;
+    } else if (widget.type === 'calendar') {
+      title = 'カレンダー';
+      bodyHtml = generateCalendarHtml();
+    } else if (widget.type === 'memo') {
+      title = 'メモ帳';
+      bodyHtml = `
+        <div class="widget-memo">
+          <textarea class="memo-textarea" placeholder="メモを入力...">${escapeHtml(widget.settings.text || '')}</textarea>
+        </div>
+      `;
+    }
+
+    frame.innerHTML = `
+      <div class="widget-header">
+        <span class="widget-title">${title}</span>
+        <button class="widget-close-btn" aria-label="削除">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      </div>
+      <div class="widget-body">
+        ${bodyHtml}
+        <div class="widget-resize-handle"></div>
+      </div>
+    `;
+
+    // 削除ボタンのバインド
+    frame.querySelector('.widget-close-btn').addEventListener('click', () => {
+      currentSettings.widgets = currentSettings.widgets.filter(w => w.id !== widget.id);
+      saveWidgets();
+      renderWidgets();
+    });
+
+    // メモ帳のテキスト保存＆ドロワーロック制御
+    if (widget.type === 'memo') {
+      const textarea = frame.querySelector('.memo-textarea');
+      textarea.addEventListener('input', (e) => {
+        widget.settings.text = e.target.value;
+        saveWidgets();
+      });
+      textarea.addEventListener('focus', () => { isShortcutDialogOpen = true; });
+      textarea.addEventListener('blur', () => { isShortcutDialogOpen = false; closeShortcutsDrawer(); });
+    }
+
+    // 移動とリサイズのバインド
+    makeWidgetDraggable(frame, widget);
+    makeWidgetResizable(frame, widget);
+
+    elements.widgetsLayer.appendChild(frame);
+  });
+
+  // 時計類の初期更新
+  updateWidgetsTime();
+}
+
+// グローバル時計更新タイマー
+function updateWidgetsTime() {
+  const now = new Date();
+  
+  // デジタル時計の更新
+  const timeStr = now.toTimeString().split(' ')[0];
+  const year = now.getFullYear();
+  const month = now.getMonth() + 1;
+  const date = now.getDate();
+  const dayNames = ['日', '月', '火', '水', '木', '金', '土'];
+  const day = dayNames[now.getDay()];
+  const dateStr = `${year}年${month}月${date}日 (${day})`;
+
+  document.querySelectorAll('.clock-time').forEach(el => el.textContent = timeStr);
+  document.querySelectorAll('.clock-date').forEach(el => el.textContent = dateStr);
+
+  // アナログ時計の更新
+  const sec = now.getSeconds();
+  const min = now.getMinutes();
+  const hr = now.getHours();
+  const secDeg = (sec / 60) * 360;
+  const minDeg = ((min + sec / 60) / 60) * 360;
+  const hrDeg = (((hr % 12) + min / 60) / 12) * 360;
+
+  document.querySelectorAll('.widget-analog-clock').forEach(clock => {
+    const hrHand = clock.querySelector('.clock-hand.hour');
+    const minHand = clock.querySelector('.clock-hand.minute');
+    const secHand = clock.querySelector('.clock-hand.second');
+    if (hrHand) hrHand.style.transform = `translateX(-50%) rotate(${hrDeg}deg)`;
+    if (minHand) minHand.style.transform = `translateX(-50%) rotate(${minDeg}deg)`;
+    if (secHand) secHand.style.transform = `translateX(-50%) rotate(${secDeg}deg)`;
+  });
+}
+
+// タイマーの起動
+function initWidgetsTimer() {
+  if (!widgetsGlobalTimer) {
+    widgetsGlobalTimer = setInterval(updateWidgetsTime, 1000);
+  }
 }
