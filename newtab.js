@@ -1230,12 +1230,29 @@ function makeWidgetDraggable(widgetFrame, widgetData) {
       if (nextGridX + widgetData.gridW > 24) nextGridX = 24 - widgetData.gridW;
       if (nextGridY + widgetData.gridH > 12) nextGridY = 12 - widgetData.gridH;
 
+      // スナップ先のセル座標が変化した場合にリアルタイムで入れ替えと衝突解決を行う
+      if (nextGridX !== currentGridX || nextGridY !== currentGridY) {
+        // 重なるウィジェットをドラッグ元の空き座標と入れ替える (スワップ)
+        swapWidgets(widgetData, nextGridX, nextGridY);
+
+        // 動かしている本人のデータを仮更新 (データ上で一度移動)
+        widgetData.gridX = nextGridX;
+        widgetData.gridY = nextGridY;
+
+        // 二次衝突の自動退避
+        resolveWidgetCollisions(widgetData.id);
+
+        // 避ける側のウィジェットのDOMのみを滑らかにアニメーションスライドさせる
+        updateWidgetsPositionsOnly();
+      }
+
       currentGridX = nextGridX;
       currentGridY = nextGridY;
 
       preview.style.left = (currentGridX / 24) * 100 + '%';
       preview.style.top = (currentGridY / 12) * 100 + '%';
 
+      // ドラッグ中のウィジェット自体はマウス操作をカクつかせないためにTransitionなしでリアルタイム追従
       widgetFrame.style.left = (currentGridX / 24) * 100 + '%';
       widgetFrame.style.top = (currentGridY / 12) * 100 + '%';
     }
@@ -1247,17 +1264,12 @@ function makeWidgetDraggable(widgetFrame, widgetData) {
       widgetFrame.classList.remove('dragging');
       preview.remove();
 
-      // 移動完了したウィジェットの座標決定前に、重なるウィジェットがあればドラッグ開始位置へ入れ替える
-      swapWidgets(widgetData, currentGridX, currentGridY);
-
+      // ドラッグ移動中のリアルタイム処理でデータは確定されているため、最終スナップ位置を再セットして永続化
       widgetData.gridX = currentGridX;
       widgetData.gridY = currentGridY;
 
-      // その他の残りの衝突を全方向に押し退け解決
-      resolveWidgetCollisions(widgetData.id);
-
       saveWidgets();
-      renderWidgets();
+      renderWidgets(); // タイマーやTodoの内容の整合性を確定するためにリビルド
     }
 
     document.addEventListener('mousemove', onMouseMove);
@@ -1609,7 +1621,7 @@ function isWidgetsColliding(w1, w2) {
   );
 }
 
-// ウィジェット同士の位置を入れ替える (iPhone風スワップ)
+// ウィジェット同士の位置を入れ替える (iPhone風スワップ・リアルタイムローリング追従仕様)
 function swapWidgets(movedWidget, targetX, targetY) {
   const tempPos = { gridX: targetX, gridY: targetY, gridW: movedWidget.gridW, gridH: movedWidget.gridH };
   
@@ -1617,9 +1629,17 @@ function swapWidgets(movedWidget, targetX, targetY) {
   const collidingWidget = currentSettings.widgets.find(w => w.id !== movedWidget.id && isWidgetsColliding(tempPos, w));
 
   if (collidingWidget) {
-    // 衝突された相手を、移動ウィジェットのドラッグ開始位置へ瞬間移動させる
+    // 衝突された相手が元々占有していた座標を退避
+    const oldX = collidingWidget.gridX;
+    const oldY = collidingWidget.gridY;
+
+    // 衝突された相手を、移動ウィジェットの「直前の空き座標（元の位置）」へ瞬間移動させる
     collidingWidget.gridX = dragStartGridX;
     collidingWidget.gridY = dragStartGridY;
+
+    // ★重要：次の連続スワップに備えて、ドラッグ元の空き座標を「衝突相手が元いた座標」に更新（ローリング）
+    dragStartGridX = oldX;
+    dragStartGridY = oldY;
 
     // スワップされたウィジェットが、スワップ先で別のウィジェットと二次衝突した場合は
     // そのスワップされた側を起点として全方向の自動押し退けを再帰解決する
@@ -1697,4 +1717,21 @@ function resolveWidgetCollisions(movedWidgetId) {
       }
     }
   }
+}
+
+// ドラッグ/リサイズ中にDOMを破壊(リビルド)せず、位置とサイズ（CSSスタイル）のみをインプレースで直接更新する軽量反映関数
+function updateWidgetsPositionsOnly() {
+  currentSettings.widgets.forEach(widget => {
+    const frame = document.querySelector(`[data-id="${widget.id}"]`);
+    if (frame) {
+      // 現在操作中（ドラッグ中またはリサイズ中）のウィジェットは、マウスカーソルに遅延なくダイレクト追従させるためスタイル更新をスキップ
+      if (frame.classList.contains('dragging') || frame.classList.contains('resizing')) {
+        return;
+      }
+      frame.style.left = (widget.gridX / 24) * 100 + '%';
+      frame.style.top = (widget.gridY / 12) * 100 + '%';
+      frame.style.width = (widget.gridW / 24) * 100 + '%';
+      frame.style.height = (widget.gridH / 12) * 100 + '%';
+    }
+  });
 }

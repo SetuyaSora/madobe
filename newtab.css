@@ -1095,7 +1095,7 @@ body.dragging-widget #widgets-layer {
   border-radius: 16px;
   overflow: visible; /* サジェストを枠外に出すため、通常時はvisibleで突き抜ける */
   pointer-events: auto; /* ウィジェット内はクリック可能 */
-  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: left 0.25s cubic-bezier(0.16, 1, 0.3, 1), top 0.25s cubic-bezier(0.16, 1, 0.3, 1), width 0.25s cubic-bezier(0.16, 1, 0.3, 1), height 0.25s cubic-bezier(0.16, 1, 0.3, 1), background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
   user-select: none;
 }
 
@@ -1128,6 +1128,7 @@ body.edit-mode .widget-frame.resizing {
   border-color: var(--accent-color);
   box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5), 0 0 0 2px var(--accent-glow);
   z-index: 999; /* 最前面へ */
+  transition: none !important; /* ドラッグ操作の追従遅延（もっさり感）を防ぐため、トランジションを強制無効化 */
 }
 
 /* ウィジェットヘッダー (ドラッグハンドル) */
