@@ -34,6 +34,23 @@ export function showContextMenu(clientX, clientY, widget) {
     if (activeMenuWidget.type === 'rss') {
       elements.rssSettingsContainer.classList.remove('hidden');
       elements.widgetRssUrlInput.value = (activeMenuWidget.settings && activeMenuWidget.settings.rssUrl) ? activeMenuWidget.settings.rssUrl : '';
+      
+      // スクロール速度スライダーの表示トグル (ティッカーモード時のみ表示)
+      if (elements.rssSpeedContainer) {
+        const frameEl = document.querySelector(`[data-id="${activeMenuWidget.id}"]`);
+        const isTicker = frameEl ? frameEl.classList.contains('layout-ticker') : false;
+        
+        if (isTicker) {
+          elements.rssSpeedContainer.classList.remove('hidden');
+          const speed = (activeMenuWidget.settings && activeMenuWidget.settings.tickerSpeed !== undefined)
+            ? activeMenuWidget.settings.tickerSpeed
+            : 45;
+          elements.widgetRssSpeedRange.value = speed;
+          elements.widgetRssSpeedValue.textContent = speed;
+        } else {
+          elements.rssSpeedContainer.classList.add('hidden');
+        }
+      }
     } else {
       elements.rssSettingsContainer.classList.add('hidden');
     }
@@ -176,6 +193,29 @@ export function initContextMenu(saveWidgetsCallback, renderWidgetsCallback) {
       } catch (err) {
         alert('無効なURL形式です。正しいURLを入力してください。');
       }
+    });
+  }
+
+  // RSSスクロール速度スライダーのイベントハンドラー
+  if (elements.widgetRssSpeedRange) {
+    elements.widgetRssSpeedRange.addEventListener('input', (e) => {
+      if (!activeMenuWidget) return;
+      const val = parseInt(e.target.value);
+      elements.widgetRssSpeedValue.textContent = val;
+
+      if (!activeMenuWidget.settings) activeMenuWidget.settings = {};
+      activeMenuWidget.settings.tickerSpeed = val;
+
+      // リアルタイムでティッカーのアニメーション速度を同期更新
+      const frameEl = document.querySelector(`[data-id="${activeMenuWidget.id}"]`);
+      if (frameEl) {
+        const track = frameEl.querySelector('.ticker-track');
+        if (track) {
+          track.style.animationDuration = `${val}s`;
+        }
+      }
+
+      saveWidgetsCallback();
     });
   }
 

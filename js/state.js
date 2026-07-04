@@ -99,6 +99,9 @@ export const elements = {
   rssSettingsContainer: null,
   widgetRssUrlInput: null,
   widgetRssSaveBtn: null,
+  rssSpeedContainer: null,
+  widgetRssSpeedRange: null,
+  widgetRssSpeedValue: null,
 
   // ドロワー & タブ
   shortcutsDrawer: null,
@@ -154,6 +157,9 @@ export function initElements() {
   elements.rssSettingsContainer = document.getElementById('rss-settings-container');
   elements.widgetRssUrlInput = document.getElementById('widget-rss-url-input');
   elements.widgetRssSaveBtn = document.getElementById('widget-rss-save-btn');
+  elements.rssSpeedContainer = document.getElementById('rss-speed-container');
+  elements.widgetRssSpeedRange = document.getElementById('widget-rss-speed-range');
+  elements.widgetRssSpeedValue = document.getElementById('widget-rss-speed-value');
 
   elements.shortcutsDrawer = document.getElementById('shortcuts-drawer');
   elements.drawerTrigger = document.getElementById('drawer-trigger');

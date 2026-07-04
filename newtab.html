@@ -247,6 +247,15 @@
       <div class="context-menu-item">
         <button id="widget-rss-save-btn" class="context-menu-btn-save">URLを適用</button>
       </div>
+      <!-- スクロール速度調整スライダー（ティッカーモード時のみ表示） -->
+      <div id="rss-speed-container" class="hidden">
+        <div class="context-menu-divider"></div>
+        <div class="context-menu-header">スクロール速度</div>
+        <div class="context-menu-item slider-item">
+          <input type="range" id="widget-rss-speed-range" min="10" max="120" step="5" value="45">
+          <span class="opacity-value-label"><span id="widget-rss-speed-value">45</span>秒</span>
+        </div>
+      </div>
     </div>
     <div class="context-menu-divider"></div>
     <button id="widget-context-delete-btn" class="context-menu-btn danger">
