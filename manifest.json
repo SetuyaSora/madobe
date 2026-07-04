@@ -17,5 +17,8 @@
   ],
   "host_permissions": [
     "https://suggestqueries.google.com/*"
+  ],
+  "optional_host_permissions": [
+    "*://*/*"
   ]
 }

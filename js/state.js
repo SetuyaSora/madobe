@@ -36,7 +36,8 @@ export const WIDGET_RULES = {
   'digital-clock': { minW: 3, minH: 2, maxW: 12, maxH: 5 },
   'analog-clock':  { minW: 3, minH: 3, maxW: 10, maxH: 10 },
   'calendar':      { minW: 4, minH: 4, maxW: 16, maxH: 8 },
-  'memo':          { minW: 3, minH: 3, maxW: 16, maxH: 8 }
+  'memo':          { minW: 3, minH: 3, maxW: 16, maxH: 8 },
+  'rss':           { minW: 6, minH: 1, maxW: 24, maxH: 8 }
 };
 
 export const LONG_PRESS_DELAY = 700; // 700ms 長押しで編集モード
@@ -95,6 +96,9 @@ export const elements = {
   widgetOpacityRange: null,
   widgetOpacityValue: null,
   deleteWidgetMenuBtn: null,
+  rssSettingsContainer: null,
+  widgetRssUrlInput: null,
+  widgetRssSaveBtn: null,
 
   // ドロワー & タブ
   shortcutsDrawer: null,
@@ -146,7 +150,10 @@ export function initElements() {
   elements.widgetContextMenu = document.getElementById('widget-context-menu');
   elements.widgetOpacityRange = document.getElementById('widget-opacity-range');
   elements.widgetOpacityValue = document.getElementById('widget-opacity-value');
-  elements.deleteWidgetMenuBtn = document.getElementById('delete-widget-menu-btn');
+  elements.deleteWidgetMenuBtn = document.getElementById('widget-context-delete-btn');
+  elements.rssSettingsContainer = document.getElementById('rss-settings-container');
+  elements.widgetRssUrlInput = document.getElementById('widget-rss-url-input');
+  elements.widgetRssSaveBtn = document.getElementById('widget-rss-save-btn');
 
   elements.shortcutsDrawer = document.getElementById('shortcuts-drawer');
   elements.drawerTrigger = document.getElementById('drawer-trigger');

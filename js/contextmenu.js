@@ -29,6 +29,16 @@ export function showContextMenu(clientX, clientY, widget) {
   elements.widgetOpacityRange.value = opacity;
   elements.widgetOpacityValue.textContent = opacity + '%';
 
+  // RSSウィジェット用の設定項目トグル表示
+  if (elements.rssSettingsContainer) {
+    if (activeMenuWidget.type === 'rss') {
+      elements.rssSettingsContainer.classList.remove('hidden');
+      elements.widgetRssUrlInput.value = (activeMenuWidget.settings && activeMenuWidget.settings.rssUrl) ? activeMenuWidget.settings.rssUrl : '';
+    } else {
+      elements.rssSettingsContainer.classList.add('hidden');
+    }
+  }
+
   elements.widgetContextMenu.classList.remove('hidden');
 
   // はみ出し補正のためにメニューの実サイズを取得
@@ -133,6 +143,49 @@ export function initContextMenu(saveWidgetsCallback, renderWidgetsCallback) {
         hideContextMenu();
       }
     });
+  }
+
+  // RSS適用ボタンのイベントハンドラー
+  if (elements.widgetRssSaveBtn) {
+    elements.widgetRssSaveBtn.addEventListener('click', () => {
+      if (!activeMenuWidget) return;
+      const rssUrl = elements.widgetRssUrlInput.value.trim();
+      if (!rssUrl) {
+        alert('有効なRSSフィードのURLを入力してください。');
+        return;
+      }
+
+      try {
+        const urlObj = new URL(rssUrl);
+        const originPattern = `${urlObj.protocol}//${urlObj.hostname}/*`;
+
+        if (typeof chrome !== 'undefined' && chrome.permissions && chrome.permissions.request) {
+          chrome.permissions.request({
+            origins: [originPattern]
+          }, (granted) => {
+            if (granted) {
+              saveAndReloadRss(rssUrl);
+            } else {
+              alert('RSSを表示するには、このサイトへの通信を許可する必要があります。');
+            }
+          });
+        } else {
+          // 通常ブラウザ環境（テスト等）
+          saveAndReloadRss(rssUrl);
+        }
+      } catch (err) {
+        alert('無効なURL形式です。正しいURLを入力してください。');
+      }
+    });
+  }
+
+  function saveAndReloadRss(url) {
+    if (!activeMenuWidget.settings) activeMenuWidget.settings = {};
+    activeMenuWidget.settings.rssUrl = url;
+    
+    saveWidgetsCallback();
+    renderWidgetsCallback();
+    hideContextMenu();
   }
 
   // メニュー以外のクリックで閉じる

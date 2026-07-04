@@ -90,6 +90,14 @@
               <p>付箋のようにテキストを記録・保存</p>
             </div>
           </div>
+          <!-- RSSフィード見本 -->
+          <div class="widget-sample-card" draggable="true" data-widget-type="rss">
+            <svg class="sample-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 11a9 9 0 0 1 9 9"></path><path d="M4 4a16 16 0 0 1 16 16"></path><circle cx="5" cy="19" r="1"></circle></svg>
+            <div class="sample-info">
+              <h4>RSSフィード</h4>
+              <p>任意のサイトの最新記事を一覧表示</p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -229,6 +237,16 @@
     <div class="context-menu-item slider-item">
       <input type="range" id="widget-opacity-range" min="0" max="100" step="5" value="55">
       <span class="opacity-value-label"><span id="widget-opacity-value">55</span>%</span>
+    </div>
+    <div id="rss-settings-container" class="context-menu-section hidden">
+      <div class="context-menu-divider"></div>
+      <div class="context-menu-header">RSSフィードのURL</div>
+      <div class="context-menu-item input-item">
+        <input type="url" id="widget-rss-url-input" placeholder="https://example.com/feed.xml" autocomplete="off">
+      </div>
+      <div class="context-menu-item">
+        <button id="widget-rss-save-btn" class="context-menu-btn-save">URLを適用</button>
+      </div>
     </div>
     <div class="context-menu-divider"></div>
     <button id="widget-context-delete-btn" class="context-menu-btn danger">

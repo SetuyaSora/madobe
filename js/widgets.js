@@ -39,6 +39,8 @@ export function getWidgetDefaultSize(type) {
       return { w: 6, h: 5 };
     case 'memo':
       return { w: 5, h: 4 };
+    case 'rss':
+      return { w: 6, h: 5 };
     default:
       return { w: 4, h: 3 };
   }
@@ -453,6 +455,16 @@ export function renderWidgets() {
       if (activeColor !== 'default') {
         frame.classList.add(`memo-theme-${activeColor}`);
       }
+    } else if (widget.type === 'rss') {
+      title = 'RSS フィード';
+      bodyHtml = `
+        <div class="widget-rss-container" id="rss-container-${widget.id}">
+          <div class="widget-rss-loading">
+            <svg class="rss-spinner-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+            <span>読み込み中...</span>
+          </div>
+        </div>
+      `;
     }
 
     frame.innerHTML = `
@@ -582,6 +594,11 @@ export function renderWidgets() {
     applyWidgetOpacityStyle(frame, widget, opacity);
 
     elements.widgetsLayer.appendChild(frame);
+
+    // RSSウィジェットのマウント後処理
+    if (widget.type === 'rss') {
+      loadRssWidgetData(widget);
+    }
   });
 
   // 時計類の初期更新
@@ -718,5 +735,213 @@ export function applyAdaptiveLayoutClasses(frame, type, w, h) {
     } else {
       frame.classList.remove('layout-large');
     }
+  } else if (type === 'rss') {
+    const isTicker = h <= 2 && w >= 8;
+    if (isTicker) {
+      frame.classList.add('layout-ticker');
+    } else {
+      frame.classList.remove('layout-ticker');
+    }
   }
+}
+
+// =============================================================
+// RSS Feed Non-blocking Fetch & Parse Helpers
+// =============================================================
+
+export function loadRssWidgetData(widget) {
+  const container = document.getElementById(`rss-container-${widget.id}`);
+  if (!container) return;
+
+  const DEFAULT_RSS = 'https://news.yahoo.co.jp/rss/topics/top-picks.xml';
+  const rssUrl = widget.settings.rssUrl || DEFAULT_RSS;
+
+  try {
+    const urlObj = new URL(rssUrl);
+    const originPattern = `${urlObj.protocol}//${urlObj.hostname}/*`;
+
+    if (typeof chrome !== 'undefined' && chrome.permissions && chrome.permissions.contains) {
+      // 拡張機能環境: 該当オリジンの許可があるか確認
+      chrome.permissions.contains({
+        origins: [originPattern]
+      }, (hasPermission) => {
+        if (hasPermission) {
+          fetchAndRenderRss(container, rssUrl);
+        } else {
+          renderPermissionRequest(container, widget, originPattern, rssUrl);
+        }
+      });
+    } else {
+      // 拡張機能外（テスト環境）: 直接フェッチ
+      fetchAndRenderRss(container, rssUrl);
+    }
+  } catch (err) {
+    renderRssError(container, '無効なURLが登録されています。右クリックから設定し直してください。');
+  }
+}
+
+// 許可リクエスト用画面のレンダリング
+function renderPermissionRequest(container, widget, originPattern, rssUrl) {
+  container.innerHTML = `
+    <div class="widget-rss-permission-request">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+      <span style="font-size: 11px; margin-bottom: 4px; line-height: 1.4;">表示するにはこのドメインへの通信許可が必要です</span>
+      <button class="rss-request-btn">アクセス許可を付与</button>
+    </div>
+  `;
+
+  const btn = container.querySelector('.rss-request-btn');
+  btn.addEventListener('click', () => {
+    if (typeof chrome !== 'undefined' && chrome.permissions && chrome.permissions.request) {
+      chrome.permissions.request({
+        origins: [originPattern]
+      }, (granted) => {
+        if (granted) {
+          if (!widget.settings) widget.settings = {};
+          widget.settings.rssUrl = rssUrl;
+          saveWidgets();
+          fetchAndRenderRss(container, rssUrl);
+        } else {
+          alert('RSSを表示するにはアクセス許可が必要です。');
+        }
+      });
+    } else {
+      fetchAndRenderRss(container, rssUrl);
+    }
+  });
+}
+
+// RSSフェッチ＆XMLパース＆DOM描画処理
+function fetchAndRenderRss(container, rssUrl) {
+  container.innerHTML = `
+    <div class="widget-rss-loading">
+      <svg class="rss-spinner-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
+      <span>フィードを読み込み中...</span>
+    </div>
+  `;
+
+  fetch(rssUrl)
+    .then(res => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.text();
+    })
+    .then(xmlText => {
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+      
+      const parserError = xmlDoc.querySelector('parsererror');
+      if (parserError) throw new Error('XMLパースエラー');
+
+      const channel = xmlDoc.querySelector('channel');
+      const channelTitle = channel ? channel.querySelector('title').textContent : 'RSS Feed';
+      
+      const items = Array.from(xmlDoc.querySelectorAll('item')).slice(0, 15);
+      
+      if (items.length === 0) {
+        container.innerHTML = `
+          <div class="widget-rss-container">
+            <div class="widget-rss-header" title="${escapeHtml(channelTitle)}">${escapeHtml(channelTitle)}</div>
+            <div class="widget-rss-error">
+              <span>新着記事が見つかりません。</span>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      // ウィジェットフレームのクラスからティッカー表示かリスト表示かを判定
+      const frameEl = container.closest('.widget-frame');
+      const isTicker = frameEl ? frameEl.classList.contains('layout-ticker') : false;
+
+      if (isTicker) {
+        // 電光掲示板（ニュースティッカー）モード
+        const tickerItems = items.map(item => {
+          const title = item.querySelector('title') ? item.querySelector('title').textContent : '無題の記事';
+          
+          let link = '#';
+          const linkNode = item.querySelector('link');
+          if (linkNode) {
+            link = linkNode.textContent.trim() || linkNode.getAttribute('href') || '#';
+          }
+          return `<a href="${escapeHtml(link)}" class="ticker-link" target="_blank" rel="noopener noreferrer">${escapeHtml(title)}</a>`;
+        });
+
+        // 繰り返し繋ぎ目をなくすため、2つ同じものを繋いでスクロールさせる
+        const tickerItemsHtml = tickerItems.join(' <span class="ticker-dot">•</span> ');
+
+        container.innerHTML = `
+          <div class="widget-rss-ticker-container">
+            <span class="ticker-channel-tag" title="${escapeHtml(channelTitle)}">${escapeHtml(channelTitle)}</span>
+            <div class="ticker-scroll-window">
+              <div class="ticker-track">
+                <div class="ticker-items">${tickerItemsHtml}</div>
+                <div class="ticker-items" aria-hidden="true">${tickerItemsHtml}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      } else {
+        // 通常のリストモード
+        let listHtml = '';
+        items.forEach(item => {
+          const title = item.querySelector('title') ? item.querySelector('title').textContent : '無題の記事';
+          
+          let link = '#';
+          const linkNode = item.querySelector('link');
+          if (linkNode) {
+            link = linkNode.textContent.trim() || linkNode.getAttribute('href') || '#';
+          }
+
+          const pubDateNode = item.querySelector('pubDate') || 
+                              item.querySelector('date') || 
+                              item.getElementsByTagName('dc:date')[0] || 
+                              item.querySelector('published') || 
+                              item.querySelector('updated');
+          
+          let dateStr = '';
+          if (pubDateNode) {
+            try {
+              const date = new Date(pubDateNode.textContent);
+              if (!isNaN(date.getTime())) {
+                dateStr = `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+              } else {
+                dateStr = pubDateNode.textContent.trim();
+              }
+            } catch(e) {
+              dateStr = pubDateNode.textContent.trim();
+            }
+          }
+
+          listHtml += `
+            <li class="widget-rss-item">
+              <a href="${escapeHtml(link)}" class="widget-rss-link" target="_blank" rel="noopener noreferrer">${escapeHtml(title)}</a>
+              ${dateStr ? `<span class="widget-rss-date">${escapeHtml(dateStr)}</span>` : ''}
+            </li>
+          `;
+        });
+
+        container.innerHTML = `
+          <div class="widget-rss-container">
+            <div class="widget-rss-header" title="${escapeHtml(channelTitle)}">${escapeHtml(channelTitle)}</div>
+            <ul class="widget-rss-list">
+              ${listHtml}
+            </ul>
+          </div>
+        `;
+      }
+    })
+    .catch(err => {
+      console.warn('RSSフェッチエラー:', err);
+      renderRssError(container, 'フィードの取得に失敗しました。URLを確認するか、しばらく待ってから右クリックメニュー等で再読込してください。');
+    });
+}
+
+// エラー画面のレンダリング
+function renderRssError(container, message) {
+  container.innerHTML = `
+    <div class="widget-rss-error">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="7.86 2 16.14 2 22 7.86 22 16.14 16.14 22 7.86 22 2 16.14 2 7.86 7.86 2"></polygon><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      <span style="font-size: 11px; line-height: 1.4;">${escapeHtml(message)}</span>
+    </div>
+  `;
 }
