@@ -14,8 +14,6 @@ export const DEFAULT_SETTINGS = {
   volume: 0,         // 0% - 100%
   speed: 1.0,        // 0.5 - 2.0
   overlayOpacity: 30, // 0% - 90%
-  showSearch: true,
-  showShortcuts: true,
   shortcuts: DEFAULT_SHORTCUTS,
   widgets: [
     {
@@ -79,8 +77,6 @@ export const elements = {
   volumeSlider: null,
   volumeValue: null,
   speedSelect: null,
-  showSearchCheckbox: null,
-  showShortcutsCheckbox: null,
 
   // ショートカットダイアログ
   shortcutDialog: null,
@@ -140,8 +136,6 @@ export function initElements() {
   elements.volumeSlider = document.getElementById('volume-slider');
   elements.volumeValue = document.getElementById('volume-value');
   elements.speedSelect = document.getElementById('speed-select');
-  elements.showSearchCheckbox = document.getElementById('show-search-checkbox');
-  elements.showShortcutsCheckbox = document.getElementById('show-shortcuts-checkbox');
 
   elements.shortcutDialog = document.getElementById('shortcut-dialog');
   elements.dialogTitle = document.getElementById('dialog-title');

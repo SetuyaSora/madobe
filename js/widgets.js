@@ -526,13 +526,7 @@ export function renderWidgets() {
     frame.querySelector('.widget-close-btn').addEventListener('click', () => {
       appState.currentSettings.widgets = appState.currentSettings.widgets.filter(w => w.id !== widget.id);
       
-      if (widget.type === 'search-bar') {
-        appState.currentSettings.showSearch = false;
-        storage.set({ showSearch: false });
-        if (elements.showSearchCheckbox) {
-          elements.showSearchCheckbox.checked = false;
-        }
-      }
+      // 検索バー削除時のトグル同期処理はトグル廃止のため削除
       
       saveWidgets();
       renderWidgets();

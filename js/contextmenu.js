@@ -190,14 +190,7 @@ export function initContextMenu(saveWidgetsCallback, renderWidgetsCallback) {
       if (confirm('このウィジェットを削除しますか？')) {
         appState.currentSettings.widgets = appState.currentSettings.widgets.filter(w => w.id !== activeMenuWidget.id);
         
-        // 検索バーが削除された場合、表示チェックボックスをOFFに同期
-        if (activeMenuWidget.type === 'search-bar') {
-          appState.currentSettings.showSearch = false;
-          storage.set({ showSearch: false });
-          if (elements.showSearchCheckbox) {
-            elements.showSearchCheckbox.checked = false;
-          }
-        }
+        // 検索バー削除時のトグル同期処理はトグル廃止のため削除
 
         saveWidgetsCallback();
         renderWidgetsCallback();

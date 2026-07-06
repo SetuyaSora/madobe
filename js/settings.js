@@ -108,36 +108,9 @@ export function applyAllSettings() {
     elements.opacityValue.textContent = `${appState.currentSettings.overlayOpacity}%`;
   }
 
-  // 5. 表示項目トグル適用
-  if (elements.showSearchCheckbox) {
-    elements.showSearchCheckbox.checked = appState.currentSettings.showSearch;
-  }
-  if (appState.currentSettings.showSearch) {
-    const hasSearch = appState.currentSettings.widgets.some(w => w.type === 'search-bar');
-    if (!hasSearch) {
-      appState.currentSettings.widgets.push({
-        id: 'widget_search_default',
-        type: 'search-bar',
-        gridX: 7, gridY: 4, gridW: 10, gridH: 1,
-        settings: {}
-      });
-    }
-  } else {
-    appState.currentSettings.widgets = appState.currentSettings.widgets.filter(w => w.type !== 'search-bar');
-  }
-
+  // 5. 表示項目トグル適用（不要のためトグル同期処理を削除。drawerTriggerは常に表示）
   if (elements.drawerTrigger) {
-    if (appState.currentSettings.showShortcuts) {
-      elements.drawerTrigger.classList.remove('hidden');
-    } else {
-      elements.drawerTrigger.classList.add('hidden');
-      if (elements.shortcutsDrawer) {
-        elements.shortcutsDrawer.classList.remove('open');
-      }
-    }
-  }
-  if (elements.showShortcutsCheckbox) {
-    elements.showShortcutsCheckbox.checked = appState.currentSettings.showShortcuts;
+    elements.drawerTrigger.classList.remove('hidden');
   }
 
   // 6. 設定パネルのUIの同期
@@ -311,48 +284,5 @@ export function initSettings() {
     });
   }
 
-  // 表示トグル (検索)
-  if (elements.showSearchCheckbox) {
-    elements.showSearchCheckbox.addEventListener('change', (e) => {
-      const checked = e.target.checked;
-      appState.currentSettings.showSearch = checked;
-      storage.set({ showSearch: checked });
-      if (checked) {
-        const hasSearch = appState.currentSettings.widgets.some(w => w.type === 'search-bar');
-        if (!hasSearch) {
-          appState.currentSettings.widgets.push({
-            id: 'widget_search_' + Date.now(),
-            type: 'search-bar',
-            gridX: 7, gridY: 4, gridW: 10, gridH: 1,
-            settings: {}
-          });
-          saveWidgets();
-          renderWidgets();
-        }
-      } else {
-        appState.currentSettings.widgets = appState.currentSettings.widgets.filter(w => w.type !== 'search-bar');
-        saveWidgets();
-        renderWidgets();
-      }
-    });
-  }
-
-  // 表示トグル (ショートカット)
-  if (elements.showShortcutsCheckbox) {
-    elements.showShortcutsCheckbox.addEventListener('change', (e) => {
-      const checked = e.target.checked;
-      appState.currentSettings.showShortcuts = checked;
-      storage.set({ showShortcuts: checked });
-      if (elements.drawerTrigger) {
-        if (checked) {
-          elements.drawerTrigger.classList.remove('hidden');
-        } else {
-          elements.drawerTrigger.classList.add('hidden');
-          if (elements.shortcutsDrawer) {
-            elements.shortcutsDrawer.classList.remove('open');
-          }
-        }
-      }
-    });
-  }
+  // 表示トグル（不要のため削除）
 }
