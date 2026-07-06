@@ -33,10 +33,10 @@ export const DEFAULT_SETTINGS = {
 // ウィジェットの種類ごとのサイズ制限（アダプティブ制約）
 export const WIDGET_RULES = {
   'search-bar':    { minW: 6, minH: 1, maxW: 24, maxH: 3 },
-  'digital-clock': { minW: 3, minH: 2, maxW: 12, maxH: 5 },
-  'analog-clock':  { minW: 3, minH: 3, maxW: 10, maxH: 10 },
+  'digital-clock': { minW: 3, minH: 1, maxW: 12, maxH: 5 },
+  'analog-clock':  { minW: 2, minH: 2, maxW: 10, maxH: 10 },
   'calendar':      { minW: 4, minH: 4, maxW: 16, maxH: 8 },
-  'memo':          { minW: 3, minH: 2, maxW: 16, maxH: 8 },
+  'memo':          { minW: 2, minH: 2, maxW: 16, maxH: 8 },
   'rss':           { minW: 6, minH: 1, maxW: 24, maxH: 8 }
 };
 

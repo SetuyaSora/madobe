@@ -617,7 +617,7 @@ export function updateWidgetsTime() {
 
     const timeEl = clockFrame.querySelector('.clock-time');
     const dateEl = clockFrame.querySelector('.clock-date');
-    const isSmall = widget.gridW < 5 || widget.gridH < 3;
+    const isSmall = widget.gridW < 5 || widget.gridH < 2;
 
     if (timeEl) {
       if (isSmall) {
@@ -706,13 +706,19 @@ export function updateWidgetsPositionsOnly() {
 // ウィジェットのサイズに応じたレイアウトクラスを付与するヘルパー
 export function applyAdaptiveLayoutClasses(frame, type, w, h) {
   if (type === 'digital-clock') {
-    const isSmall = w < 5 || h < 3;
+    const isSmall = w < 5 || h < 2;
     if (isSmall) {
       frame.classList.add('layout-small');
       frame.classList.remove('layout-large');
     } else {
       frame.classList.add('layout-large');
       frame.classList.remove('layout-small');
+    }
+    // 縦1マス時の超スリム専用クラス
+    if (h === 1) {
+      frame.classList.add('layout-height-1');
+    } else {
+      frame.classList.remove('layout-height-1');
     }
   } else if (type === 'analog-clock') {
     const isSmall = w < 5 || h < 5;
