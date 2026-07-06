@@ -363,6 +363,48 @@ export function generateCalendarHtml(widget) {
   `;
 }
 
+// メモの入力内容に応じてウィジェットの高さを自動伸縮させる
+export function adjustMemoWidgetHeight(frameEl, widget, textarea) {
+  if (!frameEl || !widget || !textarea) return;
+
+  // コンテンツの実際の高さを測定するために高さを一時的に 'auto' に
+  const prevHeight = textarea.style.height;
+  textarea.style.height = 'auto';
+  const scrollHeight = textarea.scrollHeight;
+  textarea.style.height = prevHeight;
+
+  // 1グリッドあたりの高さを計算 (画面高の 1/12)
+  const cellH = window.innerHeight / 12;
+
+  // ツールバーやヘッダー分の高さを考慮
+  const isLarge = widget.gridW >= 5 && widget.gridH >= 4;
+  const toolbarHeight = isLarge ? 30 : 0;
+  
+  // 編集モード（body.edit-modeがあるか）のヘッダー高さ
+  const isEditMode = document.body.classList.contains('edit-mode');
+  const headerHeight = isEditMode ? 30 : 0;
+  
+  // パディングや枠線の追加幅（上下パディング 8px + 枠線2px等）
+  const extraHeight = toolbarHeight + headerHeight + 16;
+
+  // 最適なグリッド高さ (切り上げ)
+  let targetGridH = Math.ceil((scrollHeight + extraHeight) / cellH);
+  
+  // 最小・最大制限 (2マス〜8マス)
+  targetGridH = Math.max(2, Math.min(8, targetGridH));
+
+  // 高さが変わる場合のみ反映
+  if (targetGridH !== widget.gridH) {
+    widget.gridH = targetGridH;
+
+    // 他のウィジェットとの衝突判定と連鎖退避をトリガー
+    resolveWidgetCollisions(widget.id);
+
+    // インプレースでDOMの位置・サイズを更新
+    updateWidgetsPositionsOnly();
+  }
+}
+
 // すべてのウィジェットをDOM構築
 export function renderWidgets() {
   if (!elements.widgetsLayer) return;
@@ -516,10 +558,15 @@ export function renderWidgets() {
       const charCountSpan = frame.querySelector('.memo-char-count');
 
       textarea.addEventListener('input', (e) => {
-        widget.settings.text = e.target.value;
+        const text = e.target.value;
+        widget.settings.text = text;
         if (charCountSpan) {
-          charCountSpan.textContent = e.target.value.length;
+          charCountSpan.textContent = text.length;
         }
+        
+        // 入力内容に合わせて高さを自動フィット
+        adjustMemoWidgetHeight(frame, widget, textarea);
+        
         saveWidgets();
       });
       textarea.addEventListener('focus', () => { appState.isShortcutDialogOpen = true; });
@@ -549,10 +596,16 @@ export function renderWidgets() {
             textarea.value = '';
             widget.settings.text = '';
             if (charCountSpan) charCountSpan.textContent = 0;
+            adjustMemoWidgetHeight(frame, widget, textarea); // 最小高さにリセット
             saveWidgets();
           }
         });
       }
+
+      // 初期描画時に最適な高さにフィットさせる
+      setTimeout(() => {
+        adjustMemoWidgetHeight(frame, widget, textarea);
+      }, 50);
     }
 
     // 右クリックで個別不透明度コンテキストメニューを開く
