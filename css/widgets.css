@@ -176,7 +176,7 @@ body.edit-mode .widget-frame:hover .widget-resize-handle {
 
 /* 1. デジタル時計ウィジェット */
 .widget-type-digital-clock .widget-body {
-  padding: 2px !important; /* あたり判定を限界まで詰めるため、余白をほぼゼロに */
+  padding: 2px 8px !important; /* 左右に少しのセーフティマージンを設けて見切れを防止 */
 }
 
 .widget-digital-clock {
@@ -189,7 +189,7 @@ body.edit-mode .widget-frame:hover .widget-resize-handle {
 }
 
 .clock-time {
-  font-size: clamp(2.6rem, 24cqw, 6.5rem); /* コンテナ幅(cqw)に連動して自動で最大スケーリング */
+  font-size: clamp(2.6rem, 21cqw, 6rem); /* 24cqwから21cqwに微小縮小し見切れを防止 */
   font-weight: 300;
   color: #fff;
   font-variant-numeric: tabular-nums;
@@ -199,7 +199,7 @@ body.edit-mode .widget-frame:hover .widget-resize-handle {
 }
 
 .clock-date {
-  font-size: clamp(0.85rem, 5.5cqw, 1.25rem); /* コンテナ幅(cqw)に連動して自動スケーリング */
+  font-size: clamp(0.85rem, 5cqw, 1.2rem); /* 5.5cqwから5cqwに微調整 */
   font-weight: 400;
   color: var(--text-secondary);
   margin-top: 4px; /* 上下を密着 */

@@ -226,10 +226,10 @@ body.edit-mode .widget-frame.resizing {
 
 /* デジタル時計の縦1マス超極薄スタイル（余白の完全排除） */
 .widget-frame.layout-height-1.widget-type-digital-clock .widget-body {
-  padding: 0 4px !important;
+  padding: 0 8px !important; /* 左右マージンを8pxに拡張 */
 }
 
 .widget-frame.layout-height-1.widget-type-digital-clock .clock-time {
-  font-size: clamp(1.4rem, 20cqw, 1.8rem) !important;
+  font-size: clamp(1.4rem, 18cqw, 1.8rem) !important; /* 20cqwから18cqwに微小縮小し見切れを防止 */
   line-height: 1 !important;
 }
