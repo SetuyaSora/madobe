@@ -174,6 +174,10 @@ body.edit-mode .widget-frame:hover .widget-resize-handle {
 /* --- 各ウィジェットの固有スタイル --- */
 
 /* 1. デジタル時計ウィジェット */
+.widget-type-digital-clock .widget-body {
+  padding: 8px 12px; /* パディングを縮小し余白を削減 */
+}
+
 .widget-digital-clock {
   display: flex;
   flex-direction: column;
@@ -184,7 +188,7 @@ body.edit-mode .widget-frame:hover .widget-resize-handle {
 }
 
 .clock-time {
-  font-size: 2.8rem;
+  font-size: 3.4rem; /* 2.8rem から 3.4rem へ拡大して余白を埋める */
   font-weight: 300;
   color: #fff;
   font-variant-numeric: tabular-nums;
@@ -197,12 +201,16 @@ body.edit-mode .widget-frame:hover .widget-resize-handle {
   font-size: 0.95rem;
   font-weight: 400;
   color: var(--text-secondary);
-  margin-top: 8px;
+  margin-top: 4px; /* 8px から 4px へ削減し上下を密着 */
   text-shadow: 0 2px 4px rgba(0,0,0,0.3);
   white-space: nowrap;
 }
 
 /* 2. アナログ時計ウィジェット */
+.widget-type-analog-clock .widget-body {
+  padding: 8px; /* パディングを削減 */
+}
+
 .widget-analog-clock {
   position: relative;
   width: 100%;
@@ -214,8 +222,8 @@ body.edit-mode .widget-frame:hover .widget-resize-handle {
 
 .analog-clock-face {
   position: relative;
-  width: 90%;
-  height: 90%;
+  width: 96%; /* 90% から 96% へ拡大して余白を極限までカット */
+  height: 96%;
   border-radius: 50%;
   border: 2px solid rgba(255,255,255,0.15);
   background: rgba(0, 0, 0, 0.15);
@@ -284,6 +292,10 @@ body.edit-mode .widget-frame:hover .widget-resize-handle {
 }
 
 /* 3. カレンダーウィジェット */
+.widget-type-calendar .widget-body {
+  padding: 10px 14px; /* パディングを削減し余白を引き締める */
+}
+
 .widget-calendar {
   width: 100%;
   height: 100%;
@@ -335,6 +347,10 @@ body.edit-mode .widget-frame:hover .widget-resize-handle {
 }
 
 /* 4. メモ帳ウィジェット */
+.widget-type-memo .widget-body {
+  padding: 8px 12px 12px 12px; /* ツールバー表示時等の余白感を引き締める */
+}
+
 .widget-memo {
   width: 100%;
   height: 100%;
