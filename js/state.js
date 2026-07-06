@@ -14,6 +14,8 @@ export const DEFAULT_SETTINGS = {
   volume: 0,         // 0% - 100%
   speed: 1.0,        // 0.5 - 2.0
   overlayOpacity: 30, // 0% - 90%
+  fontFamily: 'Inter',
+  customFontName: '',
   shortcuts: DEFAULT_SHORTCUTS,
   widgets: [
     {
@@ -77,6 +79,10 @@ export const elements = {
   volumeSlider: null,
   volumeValue: null,
   speedSelect: null,
+  fontFamilySelect: null,
+  customFontGroup: null,
+  customFontInput: null,
+  saveFontBtn: null,
 
   // ショートカットダイアログ
   shortcutDialog: null,
@@ -136,6 +142,10 @@ export function initElements() {
   elements.volumeSlider = document.getElementById('volume-slider');
   elements.volumeValue = document.getElementById('volume-value');
   elements.speedSelect = document.getElementById('speed-select');
+  elements.fontFamilySelect = document.getElementById('font-family-select');
+  elements.customFontGroup = document.getElementById('custom-font-group');
+  elements.customFontInput = document.getElementById('custom-font-input');
+  elements.saveFontBtn = document.getElementById('save-font-btn');
 
   elements.shortcutDialog = document.getElementById('shortcut-dialog');
   elements.dialogTitle = document.getElementById('dialog-title');

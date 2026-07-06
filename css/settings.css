@@ -423,3 +423,67 @@ select option {
 .switch input:checked + .switch-slider:before {
   transform: translateX(18px);
 }
+
+/* カスタムフォント入力フォーム */
+.settings-input-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  margin-bottom: 12px;
+  opacity: 1;
+  transition: opacity 0.3s ease, transform 0.3s ease;
+}
+
+.settings-input-row.hidden {
+  display: none !important;
+}
+
+.input-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.custom-font-input-wrapper {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.settings-input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-glass);
+  border-radius: 6px;
+  color: #fff;
+  padding: 6px 10px;
+  font-size: 12px;
+  outline: none;
+  width: 130px;
+  transition: var(--transition-smooth);
+}
+
+.settings-input:focus {
+  border-color: var(--accent-color);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.settings-btn {
+  background: var(--accent-gradient);
+  border: none;
+  color: #fff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px var(--accent-glow);
+  transition: var(--transition-smooth);
+}
+
+.settings-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.settings-btn:active {
+  transform: translateY(0);
+}

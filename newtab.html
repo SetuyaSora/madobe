@@ -191,6 +191,31 @@
         </div>
       </div>
 
+      <!-- フォント設定 -->
+      <div class="settings-group">
+        <label class="group-title">フォント設定</label>
+        <div class="select-row">
+          <span class="select-label">フォントの種類</span>
+          <select id="font-family-select">
+            <option value="Inter">Inter (デフォルト)</option>
+            <option value="Noto Sans JP">Noto Sans JP</option>
+            <option value="Noto Serif JP">Noto Serif JP</option>
+            <option value="M PLUS Rounded 1c">M PLUS Rounded</option>
+            <option value="Shippori Mincho">しっぽり明朝</option>
+            <option value="JetBrains Mono">JetBrains Mono</option>
+            <option value="custom">カスタム (Google Fonts)...</option>
+          </select>
+        </div>
+        <!-- カスタムフォント名入力フォーム（「カスタム」選択時のみ表示） -->
+        <div id="custom-font-group" class="settings-input-row hidden">
+          <span class="input-label">フォント名</span>
+          <div class="custom-font-input-wrapper">
+            <input type="text" id="custom-font-input" placeholder="例: Dela Gothic One" class="settings-input">
+            <button id="save-font-btn" class="settings-btn small-btn">適用</button>
+          </div>
+        </div>
+      </div>
+
       <!-- UI表示/非表示トグル（不要のため削除） -->
     </div>
   </div>

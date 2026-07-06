@@ -7,6 +7,36 @@ import { storage, loadVideoBlob, saveVideoBlob, deleteVideoBlob } from './storag
 import { renderShortcuts } from './shortcuts.js';
 import { renderWidgets, saveWidgets, initWidgetsTimer } from './widgets.js';
 
+// Google Fonts からフォントを動的にインポートし、CSS変数に適用する
+export function applyFontFamily(fontFamily, customFontName) {
+  let targetFont = fontFamily;
+  if (fontFamily === 'custom') {
+    targetFont = customFontName ? customFontName.trim() : '';
+  }
+
+  if (!targetFont) {
+    document.documentElement.style.setProperty('--font-main', "'Inter', sans-serif");
+    return;
+  }
+
+  const linkId = 'dynamic-google-font';
+  let linkEl = document.getElementById(linkId);
+  
+  const encodedFont = encodeURIComponent(targetFont);
+  const fontUrl = `https://fonts.googleapis.com/css2?family=${encodedFont}:wght@300;400;500;700&display=swap`;
+
+  if (!linkEl) {
+    linkEl = document.createElement('link');
+    linkEl.id = linkId;
+    linkEl.rel = 'stylesheet';
+    document.head.appendChild(linkEl);
+  }
+  
+  linkEl.href = fontUrl;
+
+  document.documentElement.style.setProperty('--font-main', `"${targetFont}", sans-serif`);
+}
+
 // 壁紙ソースの読み込みと適用
 export function applyVideoSource() {
   if (appState.localVideoBlobUrl) {
@@ -123,6 +153,26 @@ export function applyAllSettings() {
     elements.videoUrlInput.value = appState.currentSettings.bgUrl || '';
   }
   toggleSourceInputVisibility(appState.currentSettings.bgType);
+
+  // 7. フォント設定の適用と同期
+  const savedFontFamily = appState.currentSettings.fontFamily || 'Inter';
+  const savedCustomFontName = appState.currentSettings.customFontName || '';
+  
+  applyFontFamily(savedFontFamily, savedCustomFontName);
+
+  if (elements.fontFamilySelect) {
+    elements.fontFamilySelect.value = savedFontFamily;
+  }
+  if (elements.customFontInput) {
+    elements.customFontInput.value = savedCustomFontName;
+  }
+  if (elements.customFontGroup) {
+    if (savedFontFamily === 'custom') {
+      elements.customFontGroup.classList.remove('hidden');
+    } else {
+      elements.customFontGroup.classList.add('hidden');
+    }
+  }
 
   // 7. ショートカットの描画
   renderShortcuts();
@@ -285,4 +335,43 @@ export function initSettings() {
   }
 
   // 表示トグル（不要のため削除）
+
+  // フォントの種類切り替えリスナー
+  if (elements.fontFamilySelect) {
+    elements.fontFamilySelect.addEventListener('change', (e) => {
+      const family = e.target.value;
+      appState.currentSettings.fontFamily = family;
+      storage.set({ fontFamily: family });
+
+      if (family === 'custom') {
+        if (elements.customFontGroup) {
+          elements.customFontGroup.classList.remove('hidden');
+        }
+      } else {
+        if (elements.customFontGroup) {
+          elements.customFontGroup.classList.add('hidden');
+        }
+        applyFontFamily(family, '');
+      }
+    });
+  }
+
+  // カスタムフォント適用ボタンのクリックリスナー
+  if (elements.saveFontBtn && elements.customFontInput) {
+    const handleCustomFontApply = () => {
+      const customName = elements.customFontInput.value.trim();
+      appState.currentSettings.customFontName = customName;
+      storage.set({ customFontName: customName });
+      
+      applyFontFamily('custom', customName);
+    };
+
+    elements.saveFontBtn.addEventListener('click', handleCustomFontApply);
+    
+    elements.customFontInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        handleCustomFontApply();
+      }
+    });
+  }
 }
