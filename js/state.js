@@ -97,7 +97,8 @@ export const elements = {
   widgetOpacityValue: null,
   deleteWidgetMenuBtn: null,
   rssSettingsContainer: null,
-  widgetRssUrlInput: null,
+  rssUrlListContainer: null,
+  widgetRssAddBtn: null,
   widgetRssSaveBtn: null,
   rssSpeedContainer: null,
   widgetRssSpeedRange: null,
@@ -155,7 +156,8 @@ export function initElements() {
   elements.widgetOpacityValue = document.getElementById('widget-opacity-value');
   elements.deleteWidgetMenuBtn = document.getElementById('widget-context-delete-btn');
   elements.rssSettingsContainer = document.getElementById('rss-settings-container');
-  elements.widgetRssUrlInput = document.getElementById('widget-rss-url-input');
+  elements.rssUrlListContainer = document.getElementById('rss-url-list-container');
+  elements.widgetRssAddBtn = document.getElementById('widget-rss-add-btn');
   elements.widgetRssSaveBtn = document.getElementById('widget-rss-save-btn');
   elements.rssSpeedContainer = document.getElementById('rss-speed-container');
   elements.widgetRssSpeedRange = document.getElementById('widget-rss-speed-range');

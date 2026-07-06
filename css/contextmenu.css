@@ -148,13 +148,35 @@
   display: none;
 }
 
-.context-menu-item.input-item {
-  padding: 0 4px;
+#rss-url-list-container {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 120px;
+  overflow-y: auto;
+  padding: 2px 4px;
 }
 
-#widget-rss-url-input {
-  width: 100%;
-  height: 60px;
+/* スクロールバーの細線化 */
+#rss-url-list-container::-webkit-scrollbar {
+  width: 3px;
+}
+#rss-url-list-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+#rss-url-list-container::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
+}
+
+.rss-url-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.widget-rss-url-input-item {
+  flex: 1;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 6px;
@@ -163,29 +185,56 @@
   font-size: 11px;
   padding: 6px 8px;
   outline: none;
-  resize: none;
-  overflow-y: auto;
-  line-height: 1.4;
   box-sizing: border-box;
   transition: var(--transition-smooth);
 }
 
-/* テキストエリアスクロールバーの細線化 */
-#widget-rss-url-input::-webkit-scrollbar {
-  width: 3px;
-}
-#widget-rss-url-input::-webkit-scrollbar-track {
-  background: transparent;
-}
-#widget-rss-url-input::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 2px;
-}
-
-#widget-rss-url-input:focus {
+.widget-rss-url-input-item:focus {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.25);
   box-shadow: 0 0 8px rgba(255, 255, 255, 0.05);
+}
+
+.rss-url-remove-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.5);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 25px;
+  height: 25px;
+  transition: var(--transition-smooth);
+}
+
+.rss-url-remove-btn:hover {
+  background: rgba(239, 68, 68, 0.20);
+  border-color: rgba(239, 68, 68, 0.40);
+  color: #ef4444;
+}
+
+.context-menu-btn-add {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 6px;
+  color: var(--text-primary);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  padding: 6px 0;
+  transition: var(--transition-smooth);
+}
+
+.context-menu-btn-add:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.20);
 }
 
 .context-menu-btn-save {

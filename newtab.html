@@ -241,8 +241,14 @@
     <div id="rss-settings-container" class="context-menu-section hidden">
       <div class="context-menu-divider"></div>
       <div class="context-menu-header">RSSフィードのURL</div>
-      <div class="context-menu-item input-item">
-        <textarea id="widget-rss-url-input" placeholder="https://example.com/feed1.xml&#10;https://example.com/feed2.xml&#10;（1行に1URLを入力）" rows="3" autocomplete="off"></textarea>
+      <!-- 動的URL入力行コンテナ -->
+      <div id="rss-url-list-container"></div>
+      <!-- 追加ボタン -->
+      <div class="context-menu-item">
+        <button id="widget-rss-add-btn" class="context-menu-btn-add">
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="menu-icon"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>URLを追加</span>
+        </button>
       </div>
       <div class="context-menu-item">
         <button id="widget-rss-save-btn" class="context-menu-btn-save">URLを適用</button>

@@ -7,6 +7,36 @@ import { storage } from './storage.js';
 
 let activeMenuWidget = null;
 
+// 動的URL入力行を1つ追加する
+export function addRssUrlInputRow(value = '') {
+  if (!elements.rssUrlListContainer) return;
+
+  const row = document.createElement('div');
+  row.className = 'rss-url-row';
+  row.innerHTML = `
+    <input type="url" class="widget-rss-url-input-item" placeholder="https://example.com/feed.xml" autocomplete="off">
+    <button class="rss-url-remove-btn" title="削除">
+      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+    </button>
+  `;
+
+  // 安全に入力フォームへ値を代入
+  const input = row.querySelector('.widget-rss-url-input-item');
+  input.value = value;
+
+  // 削除ボタンイベント
+  row.querySelector('.rss-url-remove-btn').addEventListener('click', () => {
+    row.remove();
+    // すべて削除されたら空行を1つ補充
+    if (elements.rssUrlListContainer.children.length === 0) {
+      addRssUrlInputRow('');
+    }
+  });
+
+  elements.rssUrlListContainer.appendChild(row);
+  elements.rssUrlListContainer.scrollTop = elements.rssUrlListContainer.scrollHeight;
+}
+
 // コンテキストメニューを非表示にする
 export function hideContextMenu() {
   if (elements.widgetContextMenu) {
@@ -27,21 +57,26 @@ export function showContextMenu(clientX, clientY, widget) {
     : 55;
   
   elements.widgetOpacityRange.value = opacity;
-  elements.widgetOpacityValue.textContent = opacity + '%';
+  elements.widgetOpacityValue.textContent = opacity; // HTML側の%を活用するため%重複付与バグを解消
 
   // RSSウィジェット用の設定項目トグル表示
   if (elements.rssSettingsContainer) {
     if (activeMenuWidget.type === 'rss') {
       elements.rssSettingsContainer.classList.remove('hidden');
-      let urlsText = '';
-      if (activeMenuWidget.settings) {
-        if (Array.isArray(activeMenuWidget.settings.rssUrls)) {
-          urlsText = activeMenuWidget.settings.rssUrls.join('\n');
-        } else if (activeMenuWidget.settings.rssUrl) {
-          urlsText = activeMenuWidget.settings.rssUrl;
+      
+      // 動的URLリストの再生成
+      if (elements.rssUrlListContainer) {
+        elements.rssUrlListContainer.innerHTML = '';
+        const urls = (activeMenuWidget.settings && Array.isArray(activeMenuWidget.settings.rssUrls))
+          ? activeMenuWidget.settings.rssUrls
+          : (activeMenuWidget.settings && activeMenuWidget.settings.rssUrl ? [activeMenuWidget.settings.rssUrl] : []);
+        
+        if (urls.length === 0) {
+          addRssUrlInputRow('');
+        } else {
+          urls.forEach(url => addRssUrlInputRow(url));
         }
       }
-      elements.widgetRssUrlInput.value = urlsText;
       
       // スクロール速度スライダーの表示トグル (ティッカーモード時のみ表示)
       if (elements.rssSpeedContainer) {
@@ -170,20 +205,25 @@ export function initContextMenu(saveWidgetsCallback, renderWidgetsCallback) {
     });
   }
 
+  // RSS「URLを追加」ボタンのイベントハンドラー
+  if (elements.widgetRssAddBtn) {
+    elements.widgetRssAddBtn.addEventListener('click', () => {
+      addRssUrlInputRow('');
+    });
+  }
+
   // RSS適用ボタンのイベントハンドラー
   if (elements.widgetRssSaveBtn) {
     elements.widgetRssSaveBtn.addEventListener('click', () => {
       if (!activeMenuWidget) return;
-      const textVal = elements.widgetRssUrlInput.value.trim();
-      if (!textVal) {
-        alert('有効なRSSフィードのURLを入力してください。');
-        return;
-      }
-
-      // 改行で分割して有効なURL配列を作成
-      const urls = textVal.split('\n')
-        .map(u => u.trim())
-        .filter(u => u.length > 0);
+      
+      // 動的入力欄からすべてのURLを抽出
+      const inputElements = elements.rssUrlListContainer.querySelectorAll('.widget-rss-url-input-item');
+      const urls = [];
+      inputElements.forEach(input => {
+        const val = input.value.trim();
+        if (val) urls.push(val);
+      });
 
       if (urls.length === 0) {
         alert('有効なRSSフィードのURLを入力してください。');
