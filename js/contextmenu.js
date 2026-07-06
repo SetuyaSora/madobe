@@ -4,6 +4,7 @@
 
 import { appState, elements } from './state.js';
 import { storage } from './storage.js';
+import { updateTickerSpeed } from './widgets.js';
 
 let activeMenuWidget = null;
 
@@ -87,7 +88,7 @@ export function showContextMenu(clientX, clientY, widget) {
           elements.rssSpeedContainer.classList.remove('hidden');
           const speed = (activeMenuWidget.settings && activeMenuWidget.settings.tickerSpeed !== undefined)
             ? activeMenuWidget.settings.tickerSpeed
-            : 45;
+            : 5;
           elements.widgetRssSpeedRange.value = speed;
           elements.widgetRssSpeedValue.textContent = speed;
         } else {
@@ -271,13 +272,10 @@ export function initContextMenu(saveWidgetsCallback, renderWidgetsCallback) {
       if (!activeMenuWidget.settings) activeMenuWidget.settings = {};
       activeMenuWidget.settings.tickerSpeed = val;
 
-      // リアルタイムでティッカーのアニメーション速度を同期更新
+      // リアルタイムでティッカーの等速アニメーション秒数を動的再計算して同期更新
       const frameEl = document.querySelector(`[data-id="${activeMenuWidget.id}"]`);
       if (frameEl) {
-        const track = frameEl.querySelector('.ticker-track');
-        if (track) {
-          track.style.animationDuration = `${val}s`;
-        }
+        updateTickerSpeed(frameEl, val);
       }
 
       saveWidgetsCallback();

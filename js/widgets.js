@@ -739,9 +739,45 @@ export function applyAdaptiveLayoutClasses(frame, type, w, h) {
     const isTicker = h <= 2 && w >= 8;
     if (isTicker) {
       frame.classList.add('layout-ticker');
+      // リサイズにより幅が変わるため、等速スクロール速度を動的再計算
+      updateTickerSpeed(frame);
     } else {
       frame.classList.remove('layout-ticker');
     }
+  }
+}
+
+// ティッカーの実際の幅から等速スクロールのアニメーション秒数を算出して適用する
+export function updateTickerSpeed(frameEl, speedLevel) {
+  if (!frameEl) return;
+
+  let level = speedLevel;
+  if (level === undefined || level === null) {
+    const widgetId = frameEl.getAttribute('data-id');
+    const widget = appState.currentSettings.widgets.find(w => w.id === widgetId);
+    level = (widget && widget.settings && widget.settings.tickerSpeed !== undefined)
+      ? widget.settings.tickerSpeed
+      : 5;
+  }
+
+  const itemsEl = frameEl.querySelector('.ticker-items');
+  const trackEl = frameEl.querySelector('.ticker-track');
+
+  if (itemsEl && trackEl) {
+    const L = itemsEl.offsetWidth;
+    if (L === 0) {
+      // まだDOMが描画されておらず幅が取得できない場合は、少し遅延させて再計算
+      setTimeout(() => updateTickerSpeed(frameEl, level), 150);
+      return;
+    }
+
+    // 速度レベルから秒速 V (px/s) を算出 (レベル1 = 20px/s, レベル5 = 100px/s, レベル10 = 200px/s)
+    const V = parseInt(level) * 20;
+
+    // 1往復にかかる時間 T = 距離 L / 速度 V
+    const T = L / V;
+
+    trackEl.style.animationDuration = `${T}s`;
   }
 }
 
@@ -972,9 +1008,9 @@ function fetchAndRenderRss(container, rssUrls, widget) {
         // 繰り返し繋ぎ目をなくすため、2つ同じものを繋いでスクロールさせる
         const tickerItemsHtml = tickerItems.join(' <span class="ticker-dot">•</span> ');
 
-        const duration = (widget && widget.settings && widget.settings.tickerSpeed !== undefined)
+        const level = (widget && widget.settings && widget.settings.tickerSpeed !== undefined)
           ? widget.settings.tickerSpeed
-          : 45;
+          : 5;
 
         // 複数URLの場合は「複数フィード」
         const headerTitle = urls.length > 1 ? '複数フィード' : activeChannelTitle;
@@ -983,13 +1019,18 @@ function fetchAndRenderRss(container, rssUrls, widget) {
           <div class="widget-rss-ticker-container">
             <span class="ticker-channel-tag" title="${escapeHtml(headerTitle)}">${escapeHtml(headerTitle)}</span>
             <div class="ticker-scroll-window">
-              <div class="ticker-track" style="animation-duration: ${duration}s;">
+              <div class="ticker-track">
                 <div class="ticker-items">${tickerItemsHtml}</div>
                 <div class="ticker-items" aria-hidden="true">${tickerItemsHtml}</div>
               </div>
             </div>
           </div>
         `;
+
+        // 描画確定後に等速スクロールのアニメーション時間を動的適用
+        setTimeout(() => {
+          updateTickerSpeed(frameEl, level);
+        }, 100);
       } else {
         // 通常のリストモード
         let listHtml = '';
