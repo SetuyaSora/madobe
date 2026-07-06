@@ -33,7 +33,15 @@ export function showContextMenu(clientX, clientY, widget) {
   if (elements.rssSettingsContainer) {
     if (activeMenuWidget.type === 'rss') {
       elements.rssSettingsContainer.classList.remove('hidden');
-      elements.widgetRssUrlInput.value = (activeMenuWidget.settings && activeMenuWidget.settings.rssUrl) ? activeMenuWidget.settings.rssUrl : '';
+      let urlsText = '';
+      if (activeMenuWidget.settings) {
+        if (Array.isArray(activeMenuWidget.settings.rssUrls)) {
+          urlsText = activeMenuWidget.settings.rssUrls.join('\n');
+        } else if (activeMenuWidget.settings.rssUrl) {
+          urlsText = activeMenuWidget.settings.rssUrl;
+        }
+      }
+      elements.widgetRssUrlInput.value = urlsText;
       
       // スクロール速度スライダーの表示トグル (ティッカーモード時のみ表示)
       if (elements.rssSpeedContainer) {
@@ -166,32 +174,49 @@ export function initContextMenu(saveWidgetsCallback, renderWidgetsCallback) {
   if (elements.widgetRssSaveBtn) {
     elements.widgetRssSaveBtn.addEventListener('click', () => {
       if (!activeMenuWidget) return;
-      const rssUrl = elements.widgetRssUrlInput.value.trim();
-      if (!rssUrl) {
+      const textVal = elements.widgetRssUrlInput.value.trim();
+      if (!textVal) {
         alert('有効なRSSフィードのURLを入力してください。');
         return;
       }
 
-      try {
-        const urlObj = new URL(rssUrl);
-        const originPattern = `${urlObj.protocol}//${urlObj.hostname}/*`;
+      // 改行で分割して有効なURL配列を作成
+      const urls = textVal.split('\n')
+        .map(u => u.trim())
+        .filter(u => u.length > 0);
 
-        if (typeof chrome !== 'undefined' && chrome.permissions && chrome.permissions.request) {
-          chrome.permissions.request({
-            origins: [originPattern]
-          }, (granted) => {
-            if (granted) {
-              saveAndReloadRss(rssUrl);
-            } else {
-              alert('RSSを表示するには、このサイトへの通信を許可する必要があります。');
-            }
-          });
-        } else {
-          // 通常ブラウザ環境（テスト等）
-          saveAndReloadRss(rssUrl);
+      if (urls.length === 0) {
+        alert('有効なRSSフィードのURLを入力してください。');
+        return;
+      }
+
+      // 各URLのオリジンパターンを一括抽出
+      const origins = [];
+      for (const url of urls) {
+        try {
+          const urlObj = new URL(url);
+          origins.push(`${urlObj.protocol}//${urlObj.hostname}/*`);
+        } catch (err) {
+          alert(`無効なURL形式が含まれています: ${url}`);
+          return;
         }
-      } catch (err) {
-        alert('無効なURL形式です。正しいURLを入力してください。');
+      }
+
+      if (typeof chrome !== 'undefined' && chrome.permissions && chrome.permissions.request) {
+        // 重複を除外した一括許可リクエスト
+        const uniqueOrigins = [...new Set(origins)];
+        chrome.permissions.request({
+          origins: uniqueOrigins
+        }, (granted) => {
+          if (granted) {
+            saveAndReloadRss(urls);
+          } else {
+            alert('RSSを表示するには、登録したサイトへの通信を許可する必要があります。');
+          }
+        });
+      } else {
+        // 通常ブラウザ環境（テスト等）
+        saveAndReloadRss(urls);
       }
     });
   }
@@ -219,9 +244,11 @@ export function initContextMenu(saveWidgetsCallback, renderWidgetsCallback) {
     });
   }
 
-  function saveAndReloadRss(url) {
+  function saveAndReloadRss(urls) {
     if (!activeMenuWidget.settings) activeMenuWidget.settings = {};
-    activeMenuWidget.settings.rssUrl = url;
+    activeMenuWidget.settings.rssUrls = urls;
+    // 後方互換性のために最初のURLを rssUrl にも同期保存
+    activeMenuWidget.settings.rssUrl = urls[0] || '';
     
     saveWidgetsCallback();
     renderWidgetsCallback();

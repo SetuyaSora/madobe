@@ -504,6 +504,21 @@ body.edit-mode .widget-type-search-bar .widget-header {
   color: var(--text-secondary);
 }
 
+/* 配信元（ソース）表示用ラベル */
+.widget-rss-source-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent-color);
+  margin-right: 4px;
+}
+
+.ticker-source-tag {
+  color: var(--accent-color);
+  font-weight: 700;
+  margin-right: 3px;
+  font-size: 11px;
+}
+
 /* 状態表示画面のスタイル */
 .widget-rss-loading,
 .widget-rss-error,

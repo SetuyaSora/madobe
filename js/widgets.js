@@ -754,26 +754,43 @@ export function loadRssWidgetData(widget) {
   if (!container) return;
 
   const DEFAULT_RSS = 'https://news.yahoo.co.jp/rss/topics/top-picks.xml';
-  const rssUrl = widget.settings.rssUrl || DEFAULT_RSS;
+  
+  // 複数URL配列、無ければ単一URLを配列化して使用、それも無ければデフォルトRSSを配列化
+  let rssUrls = [];
+  if (widget.settings) {
+    if (Array.isArray(widget.settings.rssUrls) && widget.settings.rssUrls.length > 0) {
+      rssUrls = widget.settings.rssUrls;
+    } else if (widget.settings.rssUrl) {
+      rssUrls = [widget.settings.rssUrl];
+    }
+  }
+  if (rssUrls.length === 0) {
+    rssUrls = [DEFAULT_RSS];
+  }
 
   try {
-    const urlObj = new URL(rssUrl);
-    const originPattern = `${urlObj.protocol}//${urlObj.hostname}/*`;
+    // 全URLのオリジンパターンを抽出
+    const origins = [];
+    for (const url of rssUrls) {
+      const urlObj = new URL(url);
+      origins.push(`${urlObj.protocol}//${urlObj.hostname}/*`);
+    }
+    const uniqueOrigins = [...new Set(origins)];
 
     if (typeof chrome !== 'undefined' && chrome.permissions && chrome.permissions.contains) {
-      // 拡張機能環境: 該当オリジンの許可があるか確認
+      // 拡張機能環境: すべてのオリジンの許可があるか確認
       chrome.permissions.contains({
-        origins: [originPattern]
+        origins: uniqueOrigins
       }, (hasPermission) => {
         if (hasPermission) {
-          fetchAndRenderRss(container, rssUrl, widget);
+          fetchAndRenderRss(container, rssUrls, widget);
         } else {
-          renderPermissionRequest(container, widget, originPattern, rssUrl);
+          renderPermissionRequest(container, widget, uniqueOrigins, rssUrls);
         }
       });
     } else {
       // 拡張機能外（テスト環境）: 直接フェッチ
-      fetchAndRenderRss(container, rssUrl, widget);
+      fetchAndRenderRss(container, rssUrls, widget);
     }
   } catch (err) {
     renderRssError(container, '無効なURLが登録されています。右クリックから設定し直してください。');
@@ -781,11 +798,11 @@ export function loadRssWidgetData(widget) {
 }
 
 // 許可リクエスト用画面のレンダリング
-function renderPermissionRequest(container, widget, originPattern, rssUrl) {
+function renderPermissionRequest(container, widget, origins, rssUrls) {
   container.innerHTML = `
     <div class="widget-rss-permission-request">
       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-      <span style="font-size: 11px; margin-bottom: 4px; line-height: 1.4;">表示するにはこのドメインへの通信許可が必要です</span>
+      <span style="font-size: 11px; margin-bottom: 4px; line-height: 1.4; text-align: center;">表示するには登録ドメインへの通信許可が必要です</span>
       <button class="rss-request-btn">アクセス許可を付与</button>
     </div>
   `;
@@ -794,25 +811,29 @@ function renderPermissionRequest(container, widget, originPattern, rssUrl) {
   btn.addEventListener('click', () => {
     if (typeof chrome !== 'undefined' && chrome.permissions && chrome.permissions.request) {
       chrome.permissions.request({
-        origins: [originPattern]
+        origins: origins
       }, (granted) => {
         if (granted) {
           if (!widget.settings) widget.settings = {};
-          widget.settings.rssUrl = rssUrl;
+          widget.settings.rssUrls = rssUrls;
+          widget.settings.rssUrl = rssUrls[0] || '';
           saveWidgets();
-          fetchAndRenderRss(container, rssUrl, widget);
+          fetchAndRenderRss(container, rssUrls, widget);
         } else {
           alert('RSSを表示するにはアクセス許可が必要です。');
         }
       });
     } else {
-      fetchAndRenderRss(container, rssUrl, widget);
+      fetchAndRenderRss(container, rssUrls, widget);
     }
   });
 }
 
 // RSSフェッチ＆XMLパース＆DOM描画処理
-function fetchAndRenderRss(container, rssUrl, widget) {
+function fetchAndRenderRss(container, rssUrls, widget) {
+  // rssUrls が単一文字列として渡された場合のセーフティガード（念のため）
+  const urls = Array.isArray(rssUrls) ? rssUrls : [rssUrls];
+
   container.innerHTML = `
     <div class="widget-rss-loading">
       <svg class="rss-spinner-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="2" x2="12" y2="6"></line><line x1="12" y1="18" x2="12" y2="22"></line><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"></line><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"></line><line x1="2" y1="12" x2="6" y2="12"></line><line x1="18" y1="12" x2="22" y2="12"></line><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"></line><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"></line></svg>
@@ -820,27 +841,110 @@ function fetchAndRenderRss(container, rssUrl, widget) {
     </div>
   `;
 
-  fetch(rssUrl)
-    .then(res => {
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return res.text();
-    })
-    .then(xmlText => {
-      const parser = new DOMParser();
-      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
-      
-      const parserError = xmlDoc.querySelector('parsererror');
-      if (parserError) throw new Error('XMLパースエラー');
+  // 各URLのフェッチを並列で実行
+  const fetchPromises = urls.map(url => {
+    return fetch(url)
+      .then(res => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.text();
+      })
+      .then(xmlText => {
+        const parser = new DOMParser();
+        const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+        
+        const parserError = xmlDoc.querySelector('parsererror');
+        if (parserError) throw new Error('XMLパースエラー');
+        return { url, xmlDoc };
+      });
+  });
 
-      const channel = xmlDoc.querySelector('channel');
-      const channelTitle = channel ? channel.querySelector('title').textContent : 'RSS Feed';
-      
-      const items = Array.from(xmlDoc.querySelectorAll('item')).slice(0, 15);
-      
-      if (items.length === 0) {
+  Promise.allSettled(fetchPromises)
+    .then(results => {
+      const allItems = [];
+      let activeChannelTitle = 'RSS Feed';
+      let successCount = 0;
+
+      results.forEach(result => {
+        if (result.status === 'fulfilled') {
+          successCount++;
+          const { url, xmlDoc } = result.value;
+          const channel = xmlDoc.querySelector('channel');
+          
+          // フィードタイトル（チャンネル名）の抽出
+          let channelTitle = 'RSS Feed';
+          if (channel && channel.querySelector('title')) {
+            channelTitle = channel.querySelector('title').textContent;
+          } else {
+            // Atomフィード等
+            const feedTitleNode = xmlDoc.querySelector('feed > title');
+            if (feedTitleNode) {
+              channelTitle = feedTitleNode.textContent;
+            }
+          }
+
+          // 記事アイテムのパース（各フィード最大15件）
+          const items = Array.from(xmlDoc.querySelectorAll('item, entry')).slice(0, 15);
+          items.forEach(item => {
+            const title = item.querySelector('title') ? item.querySelector('title').textContent : '無題の記事';
+            
+            let link = '#';
+            const linkNode = item.querySelector('link');
+            if (linkNode) {
+              link = linkNode.textContent.trim() || linkNode.getAttribute('href') || '#';
+            }
+
+            const pubDateNode = item.querySelector('pubDate') || 
+                                item.querySelector('date') || 
+                                item.getElementsByTagName('dc:date')[0] || 
+                                item.querySelector('published') || 
+                                item.querySelector('updated');
+            
+            let dateObj = null;
+            let dateStr = '';
+            if (pubDateNode) {
+              try {
+                const date = new Date(pubDateNode.textContent);
+                if (!isNaN(date.getTime())) {
+                  dateObj = date;
+                  dateStr = `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
+                } else {
+                  dateStr = pubDateNode.textContent.trim();
+                }
+              } catch(e) {
+                dateStr = pubDateNode.textContent.trim();
+              }
+            }
+
+            // チャンネル名をクリーンにする（長すぎる場合にトリム）
+            const cleanChannel = channelTitle
+              .replace(/のRSS.*$/, '')
+              .replace(/フィード.*$/, '')
+              .substring(0, 10)
+              .trim();
+
+            allItems.push({
+              title,
+              link,
+              dateObj: dateObj || new Date(0), // 日付のないものは最古に
+              dateStr,
+              source: cleanChannel
+            });
+          });
+
+          if (urls.length === 1) {
+            activeChannelTitle = channelTitle;
+          }
+        }
+      });
+
+      if (successCount === 0) {
+        throw new Error('すべてのフィードの取得に失敗しました。');
+      }
+
+      if (allItems.length === 0) {
         container.innerHTML = `
           <div class="widget-rss-container">
-            <div class="widget-rss-header" title="${escapeHtml(channelTitle)}">${escapeHtml(channelTitle)}</div>
+            <div class="widget-rss-header">RSSフィード</div>
             <div class="widget-rss-error">
               <span>新着記事が見つかりません。</span>
             </div>
@@ -849,21 +953,20 @@ function fetchAndRenderRss(container, rssUrl, widget) {
         return;
       }
 
+      // 日付の降順でマージソート
+      allItems.sort((a, b) => b.dateObj.getTime() - a.dateObj.getTime());
+
+      // 最大30件を取り出す
+      const displayItems = allItems.slice(0, 30);
+
       // ウィジェットフレームのクラスからティッカー表示かリスト表示かを判定
       const frameEl = container.closest('.widget-frame');
       const isTicker = frameEl ? frameEl.classList.contains('layout-ticker') : false;
 
       if (isTicker) {
         // 電光掲示板（ニュースティッカー）モード
-        const tickerItems = items.map(item => {
-          const title = item.querySelector('title') ? item.querySelector('title').textContent : '無題の記事';
-          
-          let link = '#';
-          const linkNode = item.querySelector('link');
-          if (linkNode) {
-            link = linkNode.textContent.trim() || linkNode.getAttribute('href') || '#';
-          }
-          return `<a href="${escapeHtml(link)}" class="ticker-link" target="_blank" rel="noopener noreferrer">${escapeHtml(title)}</a>`;
+        const tickerItems = displayItems.map(item => {
+          return `<a href="${escapeHtml(item.link)}" class="ticker-link" target="_blank" rel="noopener noreferrer"><span class="ticker-source-tag">[${escapeHtml(item.source)}]</span> ${escapeHtml(item.title)}</a>`;
         });
 
         // 繰り返し繋ぎ目をなくすため、2つ同じものを繋いでスクロールさせる
@@ -873,9 +976,12 @@ function fetchAndRenderRss(container, rssUrl, widget) {
           ? widget.settings.tickerSpeed
           : 45;
 
+        // 複数URLの場合は「複数フィード」
+        const headerTitle = urls.length > 1 ? '複数フィード' : activeChannelTitle;
+
         container.innerHTML = `
           <div class="widget-rss-ticker-container">
-            <span class="ticker-channel-tag" title="${escapeHtml(channelTitle)}">${escapeHtml(channelTitle)}</span>
+            <span class="ticker-channel-tag" title="${escapeHtml(headerTitle)}">${escapeHtml(headerTitle)}</span>
             <div class="ticker-scroll-window">
               <div class="ticker-track" style="animation-duration: ${duration}s;">
                 <div class="ticker-items">${tickerItemsHtml}</div>
@@ -887,46 +993,22 @@ function fetchAndRenderRss(container, rssUrl, widget) {
       } else {
         // 通常のリストモード
         let listHtml = '';
-        items.forEach(item => {
-          const title = item.querySelector('title') ? item.querySelector('title').textContent : '無題の記事';
-          
-          let link = '#';
-          const linkNode = item.querySelector('link');
-          if (linkNode) {
-            link = linkNode.textContent.trim() || linkNode.getAttribute('href') || '#';
-          }
-
-          const pubDateNode = item.querySelector('pubDate') || 
-                              item.querySelector('date') || 
-                              item.getElementsByTagName('dc:date')[0] || 
-                              item.querySelector('published') || 
-                              item.querySelector('updated');
-          
-          let dateStr = '';
-          if (pubDateNode) {
-            try {
-              const date = new Date(pubDateNode.textContent);
-              if (!isNaN(date.getTime())) {
-                dateStr = `${date.getMonth() + 1}/${date.getDate()} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}`;
-              } else {
-                dateStr = pubDateNode.textContent.trim();
-              }
-            } catch(e) {
-              dateStr = pubDateNode.textContent.trim();
-            }
-          }
-
+        displayItems.forEach(item => {
           listHtml += `
             <li class="widget-rss-item">
-              <a href="${escapeHtml(link)}" class="widget-rss-link" target="_blank" rel="noopener noreferrer">${escapeHtml(title)}</a>
-              ${dateStr ? `<span class="widget-rss-date">${escapeHtml(dateStr)}</span>` : ''}
+              <a href="${escapeHtml(item.link)}" class="widget-rss-link" target="_blank" rel="noopener noreferrer">
+                <span class="widget-rss-source-label">[${escapeHtml(item.source)}]</span> ${escapeHtml(item.title)}
+              </a>
+              ${item.dateStr ? `<span class="widget-rss-date">${escapeHtml(item.dateStr)}</span>` : ''}
             </li>
           `;
         });
 
+        const headerTitle = urls.length > 1 ? '複数フィードの統合' : activeChannelTitle;
+
         container.innerHTML = `
           <div class="widget-rss-container">
-            <div class="widget-rss-header" title="${escapeHtml(channelTitle)}">${escapeHtml(channelTitle)}</div>
+            <div class="widget-rss-header" title="${escapeHtml(headerTitle)}">${escapeHtml(headerTitle)}</div>
             <ul class="widget-rss-list">
               ${listHtml}
             </ul>

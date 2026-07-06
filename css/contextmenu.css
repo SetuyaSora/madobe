@@ -154,6 +154,7 @@
 
 #widget-rss-url-input {
   width: 100%;
+  height: 60px;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.10);
   border-radius: 6px;
@@ -162,7 +163,23 @@
   font-size: 11px;
   padding: 6px 8px;
   outline: none;
+  resize: none;
+  overflow-y: auto;
+  line-height: 1.4;
+  box-sizing: border-box;
   transition: var(--transition-smooth);
+}
+
+/* テキストエリアスクロールバーの細線化 */
+#widget-rss-url-input::-webkit-scrollbar {
+  width: 3px;
+}
+#widget-rss-url-input::-webkit-scrollbar-track {
+  background: transparent;
+}
+#widget-rss-url-input::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 2px;
 }
 
 #widget-rss-url-input:focus {
