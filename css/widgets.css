@@ -693,3 +693,328 @@ body.edit-mode .widget-type-search-bar .widget-header {
     transform: translate3d(-50%, 0, 0);
   }
 }
+
+/* =============================================================
+ * ToDo List Widget Styles
+ * ============================================================= */
+
+.widget-type-todo .widget-body {
+  padding: 8px 12px 12px 12px !important;
+}
+
+.widget-todo-container {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* 進捗バーエリア */
+.todo-progress-area {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.todo-progress-text {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  color: var(--text-secondary);
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+}
+
+.todo-progress-bar-container {
+  width: 100%;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.todo-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--accent-gradient);
+  border-radius: 2px;
+  transition: width 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+/* フィルター & 一括削除ツールバー */
+.todo-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.todo-filter-area {
+  display: flex;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  padding: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.todo-filter-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.todo-filter-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.todo-filter-btn.active {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+/* 完了済み一括削除ボタン (大サイズで表示) */
+.todo-clear-completed-btn {
+  display: none; /* デフォルト非表示、大サイズのみ表示 */
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.todo-clear-completed-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.todo-clear-completed-btn svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* スクロール可能なタスクリスト */
+.todo-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  flex-grow: 1;
+  overflow-y: auto;
+  margin-bottom: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 2px;
+}
+
+/* スクロールバー装飾 */
+.todo-list::-webkit-scrollbar {
+  width: 4px;
+}
+.todo-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+.todo-list::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 2px;
+}
+.todo-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* 空リスト状態 */
+.todo-empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  font-size: 11px;
+  text-align: center;
+  padding: 16px;
+  opacity: 0.8;
+}
+
+/* 個々のタスク項目 */
+.todo-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  border-radius: 6px;
+  transition: var(--transition-smooth);
+}
+
+.todo-item:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+/* カスタム丸型チェックボックス */
+.todo-check-btn {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.35);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+  transition: var(--transition-smooth);
+}
+
+.todo-check-btn:hover {
+  border-color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.todo-check-icon {
+  width: 10px;
+  height: 10px;
+  color: white;
+  opacity: 0;
+  transform: scale(0.6);
+  transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.15s ease;
+}
+
+/* 完了状態のスタイル */
+.todo-item.completed {
+  opacity: 0.55;
+}
+
+.todo-item.completed .todo-text {
+  text-decoration: line-through;
+  color: var(--text-secondary);
+}
+
+.todo-item.completed .todo-check-btn {
+  border-color: transparent;
+  background: var(--accent-gradient);
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+.todo-item.completed .todo-check-icon {
+  opacity: 1;
+  transform: scale(1);
+}
+
+/* タスクのテキスト */
+.todo-text {
+  flex-grow: 1;
+  font-size: 12.5px;
+  color: var(--text-primary);
+  font-weight: 500;
+  white-space: pre-wrap;
+  word-break: break-all;
+  line-height: 1.4;
+  text-align: left;
+}
+
+/* 個別削除ボタン */
+.todo-delete-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  opacity: 0; /* 通常は非表示 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 4px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: var(--transition-smooth);
+}
+
+.todo-item:hover .todo-delete-btn {
+  opacity: 0.7; /* ホバー時にうっすら表示 */
+}
+
+.todo-delete-btn:hover {
+  opacity: 1 !important;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+}
+
+.todo-delete-btn svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* タスク追加入力エリア */
+.todo-add-area {
+  display: flex;
+  gap: 6px;
+  margin-top: auto; /* 一番下に固定 */
+  flex-shrink: 0;
+}
+
+.todo-input {
+  flex-grow: 1;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 6px 10px;
+  outline: none;
+  font-family: inherit;
+  transition: var(--transition-smooth);
+}
+
+.todo-input:focus {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: var(--border-glass-focus);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.05);
+}
+
+.todo-add-btn {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  color: var(--text-primary);
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.todo-add-btn:hover {
+  background: var(--accent-gradient);
+  border-color: transparent;
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.todo-add-btn svg {
+  width: 14px;
+  height: 14px;
+}

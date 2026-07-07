@@ -233,3 +233,57 @@ body.edit-mode .widget-frame.resizing {
   font-size: clamp(1.4rem, 18cqw, 1.8rem) !important; /* 20cqwから18cqwに微小縮小し見切れを防止 */
   line-height: 1 !important;
 }
+
+/* ToDoリストのアダプティブ制御 */
+
+/* 小サイズ (縦3マス未満)：進捗バーとフィルターを隠して極小化 */
+.widget-frame.layout-small.widget-type-todo .todo-progress-area,
+.widget-frame.layout-small.widget-type-todo .todo-toolbar {
+  display: none !important;
+}
+
+.widget-frame.layout-small.widget-type-todo .widget-body {
+  padding: 4px 8px 8px 8px !important;
+}
+
+.widget-frame.layout-small.widget-type-todo .todo-list {
+  margin-bottom: 4px;
+}
+
+.widget-frame.layout-small.widget-type-todo .todo-item {
+  padding: 4px 6px;
+  gap: 6px;
+}
+
+.widget-frame.layout-small.widget-type-todo .todo-text {
+  font-size: 11.5px;
+}
+
+/* 大サイズ (縦5マス ＆ 横5マス以上)：一括クリアボタンを表示し、余白を広げる */
+.widget-frame.layout-large.widget-type-todo .todo-clear-completed-btn {
+  display: flex !important;
+  animation: fade-in 0.2s ease forwards;
+}
+
+.widget-frame.layout-large.widget-type-todo .todo-list {
+  gap: 8px;
+}
+
+.widget-frame.layout-large.widget-type-todo .todo-item {
+  padding: 8px 12px;
+  gap: 10px;
+}
+
+.widget-frame.layout-large.widget-type-todo .todo-text {
+  font-size: 13.5px;
+}
+
+.widget-frame.layout-large.widget-type-todo .todo-check-btn {
+  width: 20px;
+  height: 20px;
+}
+
+.widget-frame.layout-large.widget-type-todo .todo-check-icon {
+  width: 12px;
+  height: 12px;
+}

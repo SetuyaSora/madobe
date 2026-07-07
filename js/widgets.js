@@ -41,6 +41,8 @@ export function getWidgetDefaultSize(type) {
       return { w: 5, h: 4 };
     case 'rss':
       return { w: 6, h: 5 };
+    case 'todo':
+      return { w: 5, h: 4 };
     default:
       return { w: 4, h: 3 };
   }
@@ -497,6 +499,45 @@ export function renderWidgets() {
       if (activeColor !== 'default') {
         frame.classList.add(`memo-theme-${activeColor}`);
       }
+    } else if (widget.type === 'todo') {
+      title = 'ToDoリスト';
+      bodyHtml = `
+        <div class="widget-todo-container" data-filter="all">
+          <!-- 進捗バーエリア -->
+          <div class="todo-progress-area">
+            <div class="todo-progress-text">
+              <span>タスクの進捗</span>
+              <span class="todo-progress-percent">0/0 (0%)</span>
+            </div>
+            <div class="todo-progress-bar-container">
+              <div class="todo-progress-bar" style="width: 0%"></div>
+            </div>
+          </div>
+          
+          <!-- フィルター ＆ 一括削除エリア -->
+          <div class="todo-toolbar">
+            <div class="todo-filter-area">
+              <button class="todo-filter-btn active" data-filter="all">すべて</button>
+              <button class="todo-filter-btn" data-filter="active">未完了</button>
+              <button class="todo-filter-btn" data-filter="completed">完了</button>
+            </div>
+            <button class="todo-clear-completed-btn" title="完了済みを一括削除">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+            </button>
+          </div>
+          
+          <!-- タスクリスト -->
+          <ul class="todo-list"></ul>
+          
+          <!-- タスク追加入力エリア -->
+          <div class="todo-add-area">
+            <input type="text" class="todo-input" placeholder="タスクを追加...">
+            <button class="todo-add-btn">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+            </button>
+          </div>
+        </div>
+      `;
     } else if (widget.type === 'rss') {
       title = 'RSS フィード';
       bodyHtml = `
@@ -645,6 +686,11 @@ export function renderWidgets() {
     // RSSウィジェットのマウント後処理
     if (widget.type === 'rss') {
       loadRssWidgetData(widget);
+    }
+
+    // ToDoリストウィジェットのバインド
+    if (widget.type === 'todo') {
+      initTodoWidget(frame, widget);
     }
   });
 
@@ -796,6 +842,17 @@ export function applyAdaptiveLayoutClasses(frame, type, w, h) {
       updateTickerSpeed(frame);
     } else {
       frame.classList.remove('layout-ticker');
+    }
+  } else if (type === 'todo') {
+    if (h < 3) {
+      frame.classList.add('layout-small');
+      frame.classList.remove('layout-large');
+    } else if (w >= 5 && h >= 5) {
+      frame.classList.add('layout-large');
+      frame.classList.remove('layout-small');
+    } else {
+      frame.classList.remove('layout-small');
+      frame.classList.remove('layout-large');
     }
   }
 }
@@ -1124,4 +1181,180 @@ function renderRssError(container, message) {
       <span style="font-size: 11px; line-height: 1.4;">${escapeHtml(message)}</span>
     </div>
   `;
+}
+
+// ToDoリストウィジェットの初期化
+function initTodoWidget(frameEl, widget) {
+  if (!widget.settings) {
+    widget.settings = {};
+  }
+  if (!widget.settings.todos) {
+    widget.settings.todos = [];
+  }
+  if (!widget.settings.filter) {
+    widget.settings.filter = 'all';
+  }
+
+  const todoContainer = frameEl.querySelector('.widget-todo-container');
+  const inputEl = todoContainer.querySelector('.todo-input');
+  const addBtn = todoContainer.querySelector('.todo-add-btn');
+  const clearCompletedBtn = todoContainer.querySelector('.todo-clear-completed-btn');
+  const filterBtns = todoContainer.querySelectorAll('.todo-filter-btn');
+
+  // 初期フィルター設定
+  todoContainer.setAttribute('data-filter', widget.settings.filter);
+  filterBtns.forEach(btn => {
+    if (btn.dataset.filter === widget.settings.filter) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+
+  // リストの初期表示と進捗の更新
+  updateTodoList(frameEl, widget);
+
+  // タスク追加イベント
+  const handleAddTodo = () => {
+    const text = inputEl.value.trim();
+    if (!text) return;
+
+    const newTodo = {
+      id: 'todo_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9),
+      text: text,
+      completed: false
+    };
+
+    widget.settings.todos.push(newTodo);
+    inputEl.value = '';
+    
+    saveWidgets();
+    updateTodoList(frameEl, widget);
+  };
+
+  addBtn.addEventListener('click', handleAddTodo);
+  inputEl.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      handleAddTodo();
+    }
+  });
+
+  // フィルター切り替えイベント
+  filterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      filterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      
+      const filter = btn.dataset.filter;
+      widget.settings.filter = filter;
+      todoContainer.setAttribute('data-filter', filter);
+      
+      saveWidgets();
+      updateTodoList(frameEl, widget);
+    });
+  });
+
+  // 完了済みの一括削除イベント
+  if (clearCompletedBtn) {
+    clearCompletedBtn.addEventListener('click', () => {
+      const completedCount = widget.settings.todos.filter(t => t.completed).length;
+      if (completedCount === 0) return;
+
+      if (confirm(`完了済みのタスク ${completedCount} 件を一括削除しますか？`)) {
+        widget.settings.todos = widget.settings.todos.filter(t => !t.completed);
+        saveWidgets();
+        updateTodoList(frameEl, widget);
+      }
+    });
+  }
+
+  // ショートカットドロワー用のフォーカスイベント
+  inputEl.addEventListener('focus', () => { appState.isShortcutDialogOpen = true; });
+  inputEl.addEventListener('blur', () => { appState.isShortcutDialogOpen = false; closeShortcutsDrawer(); });
+}
+
+// ToDoリストアイテムの描画更新
+function updateTodoList(frameEl, widget) {
+  const todoContainer = frameEl.querySelector('.widget-todo-container');
+  const listEl = todoContainer.querySelector('.todo-list');
+  listEl.innerHTML = '';
+
+  const todos = widget.settings.todos || [];
+  const filter = widget.settings.filter || 'all';
+
+  // フィルターされたタスクの決定
+  let filteredTodos = todos;
+  if (filter === 'active') {
+    filteredTodos = todos.filter(t => !t.completed);
+  } else if (filter === 'completed') {
+    filteredTodos = todos.filter(t => t.completed);
+  }
+
+  if (filteredTodos.length === 0) {
+    const emptyEl = document.createElement('div');
+    emptyEl.className = 'todo-empty-state';
+    if (filter === 'completed') {
+      emptyEl.textContent = '完了済みのタスクはありません';
+    } else if (filter === 'active') {
+      emptyEl.textContent = '未完了のタスクはありません';
+    } else {
+      emptyEl.textContent = 'タスクがありません。下から追加してください';
+    }
+    listEl.appendChild(emptyEl);
+  } else {
+    filteredTodos.forEach(todo => {
+      const li = document.createElement('li');
+      li.className = `todo-item ${todo.completed ? 'completed' : ''}`;
+      li.dataset.todoId = todo.id;
+
+      li.innerHTML = `
+        <button class="todo-check-btn" aria-label="タスクの状態切り替え">
+          <svg class="todo-check-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+        </button>
+        <span class="todo-text">${escapeHtml(todo.text)}</span>
+        <button class="todo-delete-btn" aria-label="タスクを削除">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        </button>
+      `;
+
+      // チェック切り替えイベント
+      li.querySelector('.todo-check-btn').addEventListener('click', () => {
+        todo.completed = !todo.completed;
+        saveWidgets();
+        updateTodoList(frameEl, widget);
+      });
+
+      // 個別削除イベント
+      li.querySelector('.todo-delete-btn').addEventListener('click', () => {
+        widget.settings.todos = widget.settings.todos.filter(t => t.id !== todo.id);
+        saveWidgets();
+        updateTodoList(frameEl, widget);
+      });
+
+      listEl.appendChild(li);
+    });
+  }
+
+  // 進捗バーの更新
+  updateTodoProgress(frameEl, widget);
+}
+
+// 進捗バーのリアルタイム更新
+function updateTodoProgress(frameEl, widget) {
+  const todoContainer = frameEl.querySelector('.widget-todo-container');
+  const percentEl = todoContainer.querySelector('.todo-progress-percent');
+  const progressBar = todoContainer.querySelector('.todo-progress-bar');
+
+  const todos = widget.settings.todos || [];
+  const total = todos.length;
+  const completed = todos.filter(t => t.completed).length;
+  
+  const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+  if (percentEl) {
+    percentEl.textContent = `${completed}/${total} (${percent}%)`;
+  }
+  if (progressBar) {
+    progressBar.style.width = `${percent}%`;
+  }
 }

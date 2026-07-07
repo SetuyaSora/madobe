@@ -37,7 +37,8 @@ export const WIDGET_RULES = {
   'analog-clock':  { minW: 2, minH: 2, maxW: 10, maxH: 10 },
   'calendar':      { minW: 4, minH: 4, maxW: 16, maxH: 8 },
   'memo':          { minW: 2, minH: 2, maxW: 16, maxH: 8 },
-  'rss':           { minW: 6, minH: 1, maxW: 24, maxH: 8 }
+  'rss':           { minW: 6, minH: 1, maxW: 24, maxH: 8 },
+  'todo':          { minW: 3, minH: 2, maxW: 16, maxH: 8 }
 };
 
 export const LONG_PRESS_DELAY = 700; // 700ms 長押しで編集モード
