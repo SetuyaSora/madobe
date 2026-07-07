@@ -2,7 +2,7 @@
  * Chrome Wallpaper - Widgets Control & Render Module
  * ------------------------------------------------------------- */
 
-import { appState, elements, escapeHtml, WIDGET_RULES, LONG_PRESS_DELAY } from './state.js';
+import { appState, elements, escapeHtml, WIDGET_RULES, LONG_PRESS_DELAY, GRID_COLS, GRID_ROWS } from './state.js';
 import { storage } from './storage.js';
 import { isWidgetsColliding, findFreeGridPosition, swapWidgets, resolveWidgetCollisions } from './physics.js';
 import { showContextMenu, applyWidgetOpacityStyle, updateAllWidgetsOpacityStyles } from './contextmenu.js';
@@ -30,21 +30,21 @@ export function saveWidgets() {
 export function getWidgetDefaultSize(type) {
   switch (type) {
     case 'search-bar':
-      return { w: 10, h: 1 };
+      return { w: 20, h: 2 };
     case 'digital-clock':
-      return { w: 6, h: 3 };
+      return { w: 12, h: 6 };
     case 'analog-clock':
-      return { w: 4, h: 4 };
+      return { w: 8, h: 8 };
     case 'calendar':
-      return { w: 6, h: 5 };
+      return { w: 12, h: 10 };
     case 'memo':
-      return { w: 5, h: 4 };
+      return { w: 10, h: 8 };
     case 'rss':
-      return { w: 6, h: 5 };
+      return { w: 12, h: 10 };
     case 'todo':
-      return { w: 5, h: 4 };
+      return { w: 10, h: 8 };
     default:
-      return { w: 4, h: 3 };
+      return { w: 8, h: 6 };
   }
 }
 
@@ -55,14 +55,14 @@ export function updateSnapPreview(clientX, clientY, size) {
   const mouseX = clientX - rect.left;
   const mouseY = clientY - rect.top;
 
-  const cellW = rect.width / 24;
-  const cellH = rect.height / 12;
+  const cellW = rect.width / GRID_COLS;
+  const cellH = rect.height / GRID_ROWS;
 
   let gridX = Math.floor(mouseX / cellW);
   let gridY = Math.floor(mouseY / cellH);
 
-  if (gridX + size.w > 24) gridX = 24 - size.w;
-  if (gridY + size.h > 12) gridY = 12 - size.h;
+  if (gridX + size.w > GRID_COLS) gridX = GRID_COLS - size.w;
+  if (gridY + size.h > GRID_ROWS) gridY = GRID_ROWS - size.h;
   if (gridX < 0) gridX = 0;
   if (gridY < 0) gridY = 0;
 
@@ -72,10 +72,10 @@ export function updateSnapPreview(clientX, clientY, size) {
     elements.widgetsLayer.appendChild(dragPreviewEl);
   }
 
-  dragPreviewEl.style.left = (gridX / 24) * 100 + '%';
-  dragPreviewEl.style.top = (gridY / 12) * 100 + '%';
-  dragPreviewEl.style.width = (size.w / 24) * 100 + '%';
-  dragPreviewEl.style.height = (size.h / 12) * 100 + '%';
+  dragPreviewEl.style.left = (gridX / GRID_COLS) * 100 + '%';
+  dragPreviewEl.style.top = (gridY / GRID_ROWS) * 100 + '%';
+  dragPreviewEl.style.width = (size.w / GRID_COLS) * 100 + '%';
+  dragPreviewEl.style.height = (size.h / GRID_ROWS) * 100 + '%';
   dragPreviewEl.style.display = 'block';
 }
 
@@ -108,16 +108,16 @@ export function makeWidgetDraggable(widgetFrame, widgetData) {
     const dragStartPos = { x: widgetData.gridX, y: widgetData.gridY };
 
     const layerRect = elements.widgetsLayer.getBoundingClientRect();
-    const cellW = layerRect.width / 24;
-    const cellH = layerRect.height / 12;
+    const cellW = layerRect.width / GRID_COLS;
+    const cellH = layerRect.height / GRID_ROWS;
 
     // スナッププレビュー作成
     const preview = document.createElement('div');
     preview.className = 'widget-snap-preview';
-    preview.style.left = (widgetData.gridX / 24) * 100 + '%';
-    preview.style.top = (widgetData.gridY / 12) * 100 + '%';
-    preview.style.width = (widgetData.gridW / 24) * 100 + '%';
-    preview.style.height = (widgetData.gridH / 12) * 100 + '%';
+    preview.style.left = (widgetData.gridX / GRID_COLS) * 100 + '%';
+    preview.style.top = (widgetData.gridY / GRID_ROWS) * 100 + '%';
+    preview.style.width = (widgetData.gridW / GRID_COLS) * 100 + '%';
+    preview.style.height = (widgetData.gridH / GRID_ROWS) * 100 + '%';
     elements.widgetsLayer.appendChild(preview);
 
     let currentGridX = initialGridX;
@@ -135,8 +135,8 @@ export function makeWidgetDraggable(widgetFrame, widgetData) {
 
       if (nextGridX < 0) nextGridX = 0;
       if (nextGridY < 0) nextGridY = 0;
-      if (nextGridX + widgetData.gridW > 24) nextGridX = 24 - widgetData.gridW;
-      if (nextGridY + widgetData.gridH > 12) nextGridY = 12 - widgetData.gridH;
+      if (nextGridX + widgetData.gridW > GRID_COLS) nextGridX = GRID_COLS - widgetData.gridW;
+      if (nextGridY + widgetData.gridH > GRID_ROWS) nextGridY = GRID_ROWS - widgetData.gridH;
 
       // スナップ先のセル座標が変化した場合にリアルタイムで入れ替えと衝突解決を行う
       if (nextGridX !== currentGridX || nextGridY !== currentGridY) {
@@ -157,12 +157,12 @@ export function makeWidgetDraggable(widgetFrame, widgetData) {
       currentGridX = nextGridX;
       currentGridY = nextGridY;
 
-      preview.style.left = (currentGridX / 24) * 100 + '%';
-      preview.style.top = (currentGridY / 12) * 100 + '%';
+      preview.style.left = (currentGridX / GRID_COLS) * 100 + '%';
+      preview.style.top = (currentGridY / GRID_ROWS) * 100 + '%';
 
       // ドラッグ中のウィジェット自体はTransitionなしでリアルタイム追従
-      widgetFrame.style.left = (currentGridX / 24) * 100 + '%';
-      widgetFrame.style.top = (currentGridY / 12) * 100 + '%';
+      widgetFrame.style.left = (currentGridX / GRID_COLS) * 100 + '%';
+      widgetFrame.style.top = (currentGridY / GRID_ROWS) * 100 + '%';
     }
 
     function onMouseUp() {
@@ -202,16 +202,16 @@ export function makeWidgetResizable(widgetFrame, widgetData) {
     const initialGridH = widgetData.gridH;
 
     const layerRect = elements.widgetsLayer.getBoundingClientRect();
-    const cellW = layerRect.width / 24;
-    const cellH = layerRect.height / 12;
+    const cellW = layerRect.width / GRID_COLS;
+    const cellH = layerRect.height / GRID_ROWS;
 
     // スナッププレビュー作成
     const preview = document.createElement('div');
     preview.className = 'widget-snap-preview';
-    preview.style.left = (widgetData.gridX / 24) * 100 + '%';
-    preview.style.top = (widgetData.gridY / 12) * 100 + '%';
-    preview.style.width = (widgetData.gridW / 24) * 100 + '%';
-    preview.style.height = (widgetData.gridH / 12) * 100 + '%';
+    preview.style.left = (widgetData.gridX / GRID_COLS) * 100 + '%';
+    preview.style.top = (widgetData.gridY / GRID_ROWS) * 100 + '%';
+    preview.style.width = (widgetData.gridW / GRID_COLS) * 100 + '%';
+    preview.style.height = (widgetData.gridH / GRID_ROWS) * 100 + '%';
     elements.widgetsLayer.appendChild(preview);
 
     let currentGridW = initialGridW;
@@ -228,28 +228,28 @@ export function makeWidgetResizable(widgetFrame, widgetData) {
       let nextGridH = initialGridH + gridDeltaH;
 
       // WIDGET_RULES の制約ルールを適用
-      const rules = WIDGET_RULES[widgetData.type] || { minW: 2, minH: 2, maxW: 24, maxH: 12 };
+      const rules = WIDGET_RULES[widgetData.type] || { minW: 4, minH: 4, maxW: GRID_COLS, maxH: GRID_ROWS };
       const minW = rules.minW;
       const minH = rules.minH;
-      const maxW = rules.maxW || 24;
-      const maxH = rules.maxH || 12;
+      const maxW = rules.maxW || GRID_COLS;
+      const maxH = rules.maxH || GRID_ROWS;
 
       if (nextGridW < minW) nextGridW = minW;
       if (nextGridH < minH) nextGridH = minH;
       if (nextGridW > maxW) nextGridW = maxW;
       if (nextGridH > maxH) nextGridH = maxH;
 
-      if (widgetData.gridX + nextGridW > 24) nextGridW = 24 - widgetData.gridX;
-      if (widgetData.gridY + nextGridH > 12) nextGridH = 12 - widgetData.gridY;
+      if (widgetData.gridX + nextGridW > GRID_COLS) nextGridW = GRID_COLS - widgetData.gridX;
+      if (widgetData.gridY + nextGridH > GRID_ROWS) nextGridH = GRID_ROWS - widgetData.gridY;
 
       currentGridW = nextGridW;
       currentGridH = nextGridH;
 
-      preview.style.width = (currentGridW / 24) * 100 + '%';
-      preview.style.height = (currentGridH / 12) * 100 + '%';
+      preview.style.width = (currentGridW / GRID_COLS) * 100 + '%';
+      preview.style.height = (currentGridH / GRID_ROWS) * 100 + '%';
 
-      widgetFrame.style.width = (currentGridW / 24) * 100 + '%';
-      widgetFrame.style.height = (currentGridH / 12) * 100 + '%';
+      widgetFrame.style.width = (currentGridW / GRID_COLS) * 100 + '%';
+      widgetFrame.style.height = (currentGridH / GRID_ROWS) * 100 + '%';
 
       // リアルタイムにサイズクラスをトグル付与
       applyAdaptiveLayoutClasses(widgetFrame, widgetData.type, currentGridW, currentGridH);
@@ -375,11 +375,11 @@ export function adjustMemoWidgetHeight(frameEl, widget, textarea) {
   const scrollHeight = textarea.scrollHeight;
   textarea.style.height = prevHeight;
 
-  // 1グリッドあたりの高さを計算 (画面高の 1/12)
-  const cellH = window.innerHeight / 12;
+  // 1グリッドあたりの高さを計算 (画面高の 1/GRID_ROWS)
+  const cellH = window.innerHeight / GRID_ROWS;
 
   // ツールバーやヘッダー分の高さを考慮
-  const isLarge = widget.gridW >= 5 && widget.gridH >= 4;
+  const isLarge = widget.gridW >= 10 && widget.gridH >= 8;
   const toolbarHeight = isLarge ? 30 : 0;
   
   // 編集モード（body.edit-modeがあるか）のヘッダー高さ
@@ -392,8 +392,8 @@ export function adjustMemoWidgetHeight(frameEl, widget, textarea) {
   // 最適なグリッド高さ (切り上げ)
   let targetGridH = Math.ceil((scrollHeight + extraHeight) / cellH);
   
-  // 最小・最大制限 (2マス〜8マス)
-  targetGridH = Math.max(2, Math.min(8, targetGridH));
+  // 最小・最大制限 (4マス〜16マス)
+  targetGridH = Math.max(4, Math.min(16, targetGridH));
 
   // 高さが変わる場合のみ反映
   if (targetGridH !== widget.gridH) {
@@ -418,11 +418,11 @@ export function renderWidgets() {
     frame.className = `widget-frame widget-type-${widget.type}`;
     frame.dataset.id = widget.id;
 
-    // レスポンシブな絶対配置 (24x12)
-    frame.style.left = (widget.gridX / 24) * 100 + '%';
-    frame.style.top = (widget.gridY / 12) * 100 + '%';
-    frame.style.width = (widget.gridW / 24) * 100 + '%';
-    frame.style.height = (widget.gridH / 12) * 100 + '%';
+    // レスポンシブな絶対配置 (GRID_COLS x GRID_ROWS)
+    frame.style.left = (widget.gridX / GRID_COLS) * 100 + '%';
+    frame.style.top = (widget.gridY / GRID_ROWS) * 100 + '%';
+    frame.style.width = (widget.gridW / GRID_COLS) * 100 + '%';
+    frame.style.height = (widget.gridH / GRID_ROWS) * 100 + '%';
 
     // アダプティブレイアウト用クラスの初期適用
     applyAdaptiveLayoutClasses(frame, widget.type, widget.gridW, widget.gridH);
@@ -788,10 +788,10 @@ export function updateWidgetsPositionsOnly() {
       if (frame.classList.contains('dragging') || frame.classList.contains('resizing')) {
         return;
       }
-      frame.style.left = (widget.gridX / 24) * 100 + '%';
-      frame.style.top = (widget.gridY / 12) * 100 + '%';
-      frame.style.width = (widget.gridW / 24) * 100 + '%';
-      frame.style.height = (widget.gridH / 12) * 100 + '%';
+      frame.style.left = (widget.gridX / GRID_COLS) * 100 + '%';
+      frame.style.top = (widget.gridY / GRID_ROWS) * 100 + '%';
+      frame.style.width = (widget.gridW / GRID_COLS) * 100 + '%';
+      frame.style.height = (widget.gridH / GRID_ROWS) * 100 + '%';
     }
   });
 }
@@ -799,7 +799,7 @@ export function updateWidgetsPositionsOnly() {
 // ウィジェットのサイズに応じたレイアウトクラスを付与するヘルパー
 export function applyAdaptiveLayoutClasses(frame, type, w, h) {
   if (type === 'digital-clock') {
-    const isSmall = w < 5 || h < 2;
+    const isSmall = w < 10 || h < 4;
     if (isSmall) {
       frame.classList.add('layout-small');
       frame.classList.remove('layout-large');
@@ -807,35 +807,35 @@ export function applyAdaptiveLayoutClasses(frame, type, w, h) {
       frame.classList.add('layout-large');
       frame.classList.remove('layout-small');
     }
-    // 縦1マス時の超スリム専用クラス
-    if (h === 1) {
+    // 縦2マス以下の超スリム専用クラス
+    if (h <= 2) {
       frame.classList.add('layout-height-1');
     } else {
       frame.classList.remove('layout-height-1');
     }
   } else if (type === 'analog-clock') {
-    const isSmall = w < 5 || h < 5;
+    const isSmall = w < 10 || h < 10;
     if (isSmall) {
       frame.classList.add('layout-small');
     } else {
       frame.classList.remove('layout-small');
     }
   } else if (type === 'calendar') {
-    const isLarge = w >= 7 && h >= 5;
+    const isLarge = w >= 14 && h >= 10;
     if (isLarge) {
       frame.classList.add('layout-large');
     } else {
       frame.classList.remove('layout-large');
     }
   } else if (type === 'memo') {
-    const isLarge = w >= 5 && h >= 4;
+    const isLarge = w >= 10 && h >= 8;
     if (isLarge) {
       frame.classList.add('layout-large');
     } else {
       frame.classList.remove('layout-large');
     }
   } else if (type === 'rss') {
-    const isTicker = h <= 2 && w >= 8;
+    const isTicker = h <= 4 && w >= 16;
     if (isTicker) {
       frame.classList.add('layout-ticker');
       // リサイズにより幅が変わるため、等速スクロール速度を動的再計算
@@ -844,10 +844,10 @@ export function applyAdaptiveLayoutClasses(frame, type, w, h) {
       frame.classList.remove('layout-ticker');
     }
   } else if (type === 'todo') {
-    if (h < 3) {
+    if (h < 6) {
       frame.classList.add('layout-small');
       frame.classList.remove('layout-large');
-    } else if (w >= 5 && h >= 5) {
+    } else if (w >= 10 && h >= 10) {
       frame.classList.add('layout-large');
       frame.classList.remove('layout-small');
     } else {

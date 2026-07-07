@@ -2,7 +2,7 @@
  * Chrome Wallpaper - Settings Controller Module
  * ------------------------------------------------------------- */
 
-import { appState, elements } from './state.js';
+import { appState, elements, GRID_COLS, GRID_ROWS } from './state.js';
 import { storage, loadVideoBlob, saveVideoBlob, deleteVideoBlob } from './storage.js';
 import { renderShortcuts } from './shortcuts.js';
 import { renderWidgets, saveWidgets, initWidgetsTimer } from './widgets.js';
@@ -107,6 +107,23 @@ export function toggleSourceInputVisibility(type) {
 
 // 全ての設定をDOM/動画プレイヤーへ適用・初期同期
 export function applyAllSettings() {
+  // 初回起動時の 48x24 グリッドへの自動データマイグレーション
+  if (!appState.currentSettings.gridVersion || appState.currentSettings.gridVersion < 2) {
+    if (appState.currentSettings.widgets && appState.currentSettings.widgets.length > 0) {
+      appState.currentSettings.widgets.forEach(widget => {
+        widget.gridX = (widget.gridX || 0) * 2;
+        widget.gridY = (widget.gridY || 0) * 2;
+        widget.gridW = (widget.gridW || 4) * 2;
+        widget.gridH = (widget.gridH || 3) * 2;
+      });
+    }
+    appState.currentSettings.gridVersion = 2;
+    storage.set({ 
+      widgets: appState.currentSettings.widgets,
+      gridVersion: 2
+    });
+  }
+
   // 1. 壁紙ソースの適用
   applyVideoSource();
 

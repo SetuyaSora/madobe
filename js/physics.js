@@ -2,7 +2,7 @@
  * Chrome Wallpaper - Physics & Collision Resolution Module
  * ------------------------------------------------------------- */
 
-import { appState } from './state.js';
+import { appState, GRID_COLS, GRID_ROWS } from './state.js';
 
 // 2つのウィジェットが重なっているか判定
 export function isWidgetsColliding(w1, w2) {
@@ -17,8 +17,8 @@ export function isWidgetsColliding(w1, w2) {
 // 画面全体の空きグリッドポジションを全探索 (W x H サイズに対応)
 export function findFreeGridPosition(w, h, excludeIds = []) {
   const widgets = appState.currentSettings.widgets;
-  const gridWidthLimit = 24;
-  const gridHeightLimit = 12;
+  const gridWidthLimit = GRID_COLS;
+  const gridHeightLimit = GRID_ROWS;
 
   for (let y = 0; y <= gridHeightLimit - h; y++) {
     for (let x = 0; x <= gridWidthLimit - w; x++) {
@@ -67,8 +67,8 @@ export function resolveWidgetCollisions(movedWidgetId) {
   let changed = true;
   let iterations = 0;
   const maxIterations = 50; // 無限ループガード
-  const gridWidthLimit = 24;
-  const gridHeightLimit = 12;
+  const gridWidthLimit = GRID_COLS;
+  const gridHeightLimit = GRID_ROWS;
 
   while (changed && iterations < maxIterations) {
     changed = false;

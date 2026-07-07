@@ -2,7 +2,7 @@
  * Chrome Wallpaper - Main JavaScript Hub
  * ------------------------------------------------------------- */
 
-import { appState, elements, initElements } from './js/state.js';
+import { appState, elements, initElements, GRID_COLS, GRID_ROWS } from './js/state.js';
 import { storage } from './js/storage.js';
 import { initSettings, applyAllSettings } from './js/settings.js';
 import { initShortcuts, closeShortcutsDrawer } from './js/shortcuts.js';
@@ -119,15 +119,15 @@ function initGlobalEvents() {
       const mouseX = e.clientX - rect.left;
       const mouseY = e.clientY - rect.top;
 
-      const cellW = rect.width / 24;
-      const cellH = rect.height / 12;
+      const cellW = rect.width / GRID_COLS;
+      const cellH = rect.height / GRID_ROWS;
 
       let gridX = Math.floor(mouseX / cellW);
       let gridY = Math.floor(mouseY / cellH);
       const size = getWidgetDefaultSize(type);
 
-      if (gridX + size.w > 24) gridX = 24 - size.w;
-      if (gridY + size.h > 12) gridY = 12 - size.h;
+      if (gridX + size.w > GRID_COLS) gridX = GRID_COLS - size.w;
+      if (gridY + size.h > GRID_ROWS) gridY = GRID_ROWS - size.h;
       if (gridX < 0) gridX = 0;
       if (gridY < 0) gridY = 0;
 

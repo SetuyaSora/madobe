@@ -8,6 +8,9 @@ export const DEFAULT_SHORTCUTS = [
   { name: 'GitHub', url: 'https://github.com' }
 ];
 
+export const GRID_COLS = 48;
+export const GRID_ROWS = 24;
+
 export const DEFAULT_SETTINGS = {
   bgType: 'default', // 'default', 'url', 'file'
   bgUrl: '',
@@ -16,15 +19,16 @@ export const DEFAULT_SETTINGS = {
   overlayOpacity: 30, // 0% - 90%
   fontFamily: 'Inter',
   customFontName: '',
+  gridVersion: 2,    // グリッドマイグレーション用フラグ
   shortcuts: DEFAULT_SHORTCUTS,
   widgets: [
     {
       id: 'widget_search_default',
       type: 'search-bar',
-      gridX: 7,
-      gridY: 4,
-      gridW: 10,
-      gridH: 1,
+      gridX: 14,
+      gridY: 8,
+      gridW: 20,
+      gridH: 2,
       settings: {}
     }
   ]
@@ -32,13 +36,13 @@ export const DEFAULT_SETTINGS = {
 
 // ウィジェットの種類ごとのサイズ制限（アダプティブ制約）
 export const WIDGET_RULES = {
-  'search-bar':    { minW: 6, minH: 1, maxW: 24, maxH: 3 },
-  'digital-clock': { minW: 3, minH: 1, maxW: 12, maxH: 5 },
-  'analog-clock':  { minW: 2, minH: 2, maxW: 10, maxH: 10 },
-  'calendar':      { minW: 4, minH: 4, maxW: 16, maxH: 8 },
-  'memo':          { minW: 2, minH: 2, maxW: 16, maxH: 8 },
-  'rss':           { minW: 6, minH: 1, maxW: 24, maxH: 8 },
-  'todo':          { minW: 3, minH: 2, maxW: 16, maxH: 8 }
+  'search-bar':    { minW: 12, minH: 2, maxW: 48, maxH: 6 },
+  'digital-clock': { minW: 6, minH: 2, maxW: 24, maxH: 10 },
+  'analog-clock':  { minW: 4, minH: 4, maxW: 20, maxH: 20 },
+  'calendar':      { minW: 8, minH: 8, maxW: 32, maxH: 16 },
+  'memo':          { minW: 4, minH: 4, maxW: 32, maxH: 16 },
+  'rss':           { minW: 12, minH: 2, maxW: 48, maxH: 16 },
+  'todo':          { minW: 6, minH: 4, maxW: 32, maxH: 16 }
 };
 
 export const LONG_PRESS_DELAY = 700; // 700ms 長押しで編集モード
