@@ -138,17 +138,12 @@ export function makeWidgetDraggable(widgetFrame, widgetData) {
       if (nextGridX + widgetData.gridW > GRID_COLS) nextGridX = GRID_COLS - widgetData.gridW;
       if (nextGridY + widgetData.gridH > GRID_ROWS) nextGridY = GRID_ROWS - widgetData.gridH;
 
-      // スナップ先のセル座標が変化した場合にリアルタイムで入れ替えを行う
+      // スナップ先のセル座標が変化した場合にリアルタイムでデータを更新し、衝突チェックを走らせる
       if (nextGridX !== currentGridX || nextGridY !== currentGridY) {
-        // 重なるウィジェットをドラッグ元の空き座標と入れ替える (スワップ)
-        swapWidgets(widgetData, nextGridX, nextGridY, dragStartPos);
-
-        // 動かしている本人のデータを仮更新 (データ上で一度移動)
         widgetData.gridX = nextGridX;
         widgetData.gridY = nextGridY;
-
-        // 避ける側のウィジェットのDOMのみを滑らかにアニメーションスライドさせる
         updateWidgetsPositionsOnly();
+        checkAllCollisions();
       }
 
       currentGridX = nextGridX;
@@ -173,11 +168,9 @@ export function makeWidgetDraggable(widgetFrame, widgetData) {
       widgetData.gridX = currentGridX;
       widgetData.gridY = currentGridY;
 
-      // ドラッグが完了した最終確定時に、玉突き衝突を1回だけ解決する
-      resolveWidgetCollisions(widgetData.id);
-
       saveWidgets();
       renderWidgets(); // リビルド
+      checkAllCollisions(); // リビルド後に重なりがあるか再度判定して赤枠を反映
     }
 
     document.addEventListener('mousemove', onMouseMove);
@@ -251,8 +244,15 @@ export function makeWidgetResizable(widgetFrame, widgetData) {
       widgetFrame.style.width = (currentGridW / GRID_COLS) * 100 + '%';
       widgetFrame.style.height = (currentGridH / GRID_ROWS) * 100 + '%';
 
+      // データ上の仮サイズを更新
+      widgetData.gridW = currentGridW;
+      widgetData.gridH = currentGridH;
+
       // リアルタイムにサイズクラスをトグル付与
       applyAdaptiveLayoutClasses(widgetFrame, widgetData.type, currentGridW, currentGridH);
+
+      // リサイズ中の重なり赤枠のリアルタイム更新
+      checkAllCollisions();
     }
 
     function onMouseUp() {
@@ -265,11 +265,9 @@ export function makeWidgetResizable(widgetFrame, widgetData) {
       widgetData.gridW = currentGridW;
       widgetData.gridH = currentGridH;
 
-      // 重なった際の押し退け解決
-      resolveWidgetCollisions(widgetData.id);
-
       saveWidgets();
       renderWidgets(); // リビルド
+      checkAllCollisions(); // 再描画後の赤枠の再反映
     }
 
     document.addEventListener('mousemove', onMouseMove);
@@ -696,6 +694,9 @@ export function renderWidgets() {
 
   // 時計類の初期更新
   updateWidgetsTime();
+
+  // レンダリング直後の衝突判定と赤枠の反映
+  checkAllCollisions();
 }
 
 // グローバル時計更新タイマー
@@ -775,6 +776,21 @@ export function enterEditMode() {
 // 編集モードを終了する
 export function exitEditMode() {
   if (!appState.isEditMode) return;
+
+  // 重なり（衝突）がある場合は終了を抑止し警告フィードバックを行う
+  if (checkAllCollisions()) {
+    showCollisionToast("ウィジェットが重なり合っています。重なりを解消してから通常モードに戻ってください。");
+    
+    // 重なっている要素をプルプルとエラー揺らしする
+    const collidingFrames = document.querySelectorAll('.widget-frame.colliding');
+    collidingFrames.forEach(frame => {
+      frame.classList.add('error-bounce');
+      // アニメーション完了後にクラスを外す（再度トリガーできるように）
+      setTimeout(() => frame.classList.remove('error-bounce'), 400);
+    });
+    return;
+  }
+
   appState.isEditMode = false;
   document.body.classList.remove('edit-mode');
   updateAllWidgetsOpacityStyles();
@@ -1357,4 +1373,69 @@ function updateTodoProgress(frameEl, widget) {
   if (progressBar) {
     progressBar.style.width = `${percent}%`;
   }
+}
+
+// =============================================================
+// Overlap Check & Toast Warning Helpers
+// =============================================================
+
+// すべてのウィジェットの衝突判定を行い、重なりがある要素に '.colliding' をトグル付与する
+export function checkAllCollisions() {
+  const widgets = appState.currentSettings.widgets;
+  if (!widgets || widgets.length === 0) return false;
+
+  const collidingIds = new Set();
+
+  for (let i = 0; i < widgets.length; i++) {
+    for (let j = i + 1; j < widgets.length; j++) {
+      if (isWidgetsColliding(widgets[i], widgets[j])) {
+        collidingIds.add(widgets[i].id);
+        collidingIds.add(widgets[j].id);
+      }
+    }
+  }
+
+  // DOM要素にクラスを反映
+  widgets.forEach(w => {
+    const frame = document.querySelector(`[data-id="${w.id}"]`);
+    if (frame) {
+      if (collidingIds.has(w.id)) {
+        frame.classList.add('colliding');
+      } else {
+        frame.classList.remove('colliding');
+      }
+    }
+  });
+
+  return collidingIds.size > 0;
+}
+
+// 衝突警告用のグラスモルフィズムトーストを表示する
+export function showCollisionToast(message) {
+  let toast = document.getElementById('collision-toast');
+  if (!toast) {
+    toast = document.createElement('div');
+    toast.id = 'collision-toast';
+    toast.className = 'collision-toast';
+    toast.innerHTML = `
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="alert-icon">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <span class="toast-message"></span>
+    `;
+    document.body.appendChild(toast);
+  }
+
+  toast.querySelector('.toast-message').textContent = message;
+  toast.classList.add('show');
+
+  if (toast.timeoutId) {
+    clearTimeout(toast.timeoutId);
+  }
+
+  toast.timeoutId = setTimeout(() => {
+    toast.classList.remove('show');
+  }, 3500);
 }

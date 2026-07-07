@@ -1018,3 +1018,70 @@ body.edit-mode .widget-type-search-bar .widget-header {
   width: 14px;
   height: 14px;
 }
+
+/* =============================================================
+ * Collision Highlight & Warning Toast Styles
+ * ============================================================= */
+
+/* 重なり赤枠強調表示 */
+.widget-frame.colliding {
+  border-color: rgba(239, 68, 68, 0.8) !important;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.4), inset 0 0 0 1px rgba(239, 68, 68, 0.3) !important;
+}
+
+.widget-frame.colliding::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(239, 68, 68, 0.05);
+  border-radius: inherit;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 衝突警告トースト通知 */
+.collision-toast {
+  position: fixed;
+  bottom: 32px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  color: #fca5a5;
+  padding: 12px 24px;
+  border-radius: 16px;
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.5), 0 0 20px rgba(239, 68, 68, 0.15);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease, transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.collision-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+.collision-toast .alert-icon {
+  flex-shrink: 0;
+  stroke: #ef4444;
+}
+
+/* エラー警告時の揺れアニメーション */
+.widget-frame.error-bounce {
+  animation: errorShake 0.4s ease;
+}
+
+@keyframes errorShake {
+  0%, 100% { transform: translateX(0); }
+  20%, 60% { transform: translateX(-6px); }
+  40%, 80% { transform: translateX(6px); }
+}

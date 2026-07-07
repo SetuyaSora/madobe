@@ -15,9 +15,10 @@ import {
   removeSnapPreview, 
   setCurrentDraggedType,
   getCurrentDraggedType,
-  exitEditMode
+  exitEditMode,
+  checkAllCollisions,
+  showCollisionToast
 } from './js/widgets.js';
-import { resolveWidgetCollisions } from './js/physics.js';
 
 document.addEventListener('DOMContentLoaded', () => {
   // 1. DOM要素のキャッシュ初期化
@@ -146,10 +147,14 @@ function initGlobalEvents() {
       }
       appState.currentSettings.widgets.push(newWidget);
 
-      // 新規ドロップ時の衝突解消と保存・再描画
-      resolveWidgetCollisions(newWidget.id);
+      // 新規追加時の保存・再描画
       saveWidgets();
       renderWidgets();
+
+      // 重なりがあるかチェックして赤枠を反映
+      if (checkAllCollisions()) {
+        showCollisionToast("ウィジェットが重なっています。配置を調整してください。");
+      }
     });
   }
 }
