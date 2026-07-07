@@ -15,7 +15,7 @@ export function applyFontFamily(fontFamily, customFontName) {
   }
 
   if (!targetFont) {
-    document.documentElement.style.setProperty('--font-main', "'Inter', sans-serif");
+    document.documentElement.style.setProperty('--font-sans', "'Inter', sans-serif");
     return;
   }
 
@@ -34,7 +34,7 @@ export function applyFontFamily(fontFamily, customFontName) {
   
   linkEl.href = fontUrl;
 
-  document.documentElement.style.setProperty('--font-main', `"${targetFont}", sans-serif`);
+  document.documentElement.style.setProperty('--font-sans', `"${targetFont}", sans-serif`);
 }
 
 // 壁紙ソースの読み込みと適用
