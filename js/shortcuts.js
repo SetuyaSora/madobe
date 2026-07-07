@@ -22,7 +22,7 @@ function hueToRgb(h) {
 
 // ドロワーを開く
 export function openShortcutsDrawer() {
-  if (appState.currentSettings.showShortcuts && elements.shortcutsDrawer) {
+  if (elements.shortcutsDrawer) {
     elements.shortcutsDrawer.classList.add('open');
   }
 }
