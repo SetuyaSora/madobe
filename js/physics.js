@@ -56,9 +56,7 @@ export function swapWidgets(movedWidget, targetX, targetY, dragStartPos) {
     dragStartPos.x = oldX;
     dragStartPos.y = oldY;
 
-    // スワップされたウィジェットが、スワップ先で別のウィジェットと二次衝突した場合は
-    // そのスワップされた側を起点として全方向の自動押し退けを再帰解決する
-    resolveWidgetCollisions(collidingWidget.id);
+    // (ドラッグ中の玉突き崩れを防ぐため、スワップ相手の二次衝突解決は mouseup 時の一括解決に委ねる)
   }
 }
 

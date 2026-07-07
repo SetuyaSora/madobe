@@ -138,7 +138,7 @@ export function makeWidgetDraggable(widgetFrame, widgetData) {
       if (nextGridX + widgetData.gridW > GRID_COLS) nextGridX = GRID_COLS - widgetData.gridW;
       if (nextGridY + widgetData.gridH > GRID_ROWS) nextGridY = GRID_ROWS - widgetData.gridH;
 
-      // スナップ先のセル座標が変化した場合にリアルタイムで入れ替えと衝突解決を行う
+      // スナップ先のセル座標が変化した場合にリアルタイムで入れ替えを行う
       if (nextGridX !== currentGridX || nextGridY !== currentGridY) {
         // 重なるウィジェットをドラッグ元の空き座標と入れ替える (スワップ)
         swapWidgets(widgetData, nextGridX, nextGridY, dragStartPos);
@@ -146,9 +146,6 @@ export function makeWidgetDraggable(widgetFrame, widgetData) {
         // 動かしている本人のデータを仮更新 (データ上で一度移動)
         widgetData.gridX = nextGridX;
         widgetData.gridY = nextGridY;
-
-        // 二次衝突の自動退避
-        resolveWidgetCollisions(widgetData.id);
 
         // 避ける側のウィジェットのDOMのみを滑らかにアニメーションスライドさせる
         updateWidgetsPositionsOnly();
@@ -175,6 +172,9 @@ export function makeWidgetDraggable(widgetFrame, widgetData) {
       // 最終スナップ位置を再セットして永続化
       widgetData.gridX = currentGridX;
       widgetData.gridY = currentGridY;
+
+      // ドラッグが完了した最終確定時に、玉突き衝突を1回だけ解決する
+      resolveWidgetCollisions(widgetData.id);
 
       saveWidgets();
       renderWidgets(); // リビルド
