@@ -12,12 +12,12 @@ export const GRID_COLS = 48;
 export const GRID_ROWS = 24;
 
 export const DEFAULT_SETTINGS = {
-  bgType: 'default', // 'default', 'url', 'file'
+  bgType: 'default', // 'default', 'url', 'file' (初期インストール時は内蔵動画を再生するためにdefaultとする)
   bgUrl: '',
   volume: 0,         // 0% - 100%
   speed: 1.0,        // 0.5 - 2.0
-  overlayOpacity: 30, // 0% - 90%
-  fontFamily: 'Inter',
+  overlayOpacity: 10, // 0% - 90%
+  fontFamily: 'Shippori Mincho',
   customFontName: '',
   gridVersion: 2,    // グリッドマイグレーション用フラグ
   shortcuts: DEFAULT_SHORTCUTS,
@@ -25,43 +25,78 @@ export const DEFAULT_SETTINGS = {
     {
       id: 'widget_digital_clock_default',
       type: 'digital-clock',
-      gridX: 18,
-      gridY: 3,
-      gridW: 12,
-      gridH: 3,
-      settings: {}
+      gridX: 1,
+      gridY: 1,
+      gridW: 13,
+      gridH: 6,
+      settings: {
+        opacity: 0
+      }
     },
     {
       id: 'widget_search_default',
       type: 'search-bar',
-      gridX: 14,
-      gridY: 7,
+      gridX: 15,
+      gridY: 3,
       gridW: 20,
-      gridH: 2,
-      settings: {}
+      gridH: 4,
+      settings: {
+        opacity: 0
+      }
     },
     {
       id: 'widget_calendar_default',
       type: 'calendar',
-      gridX: 3,
-      gridY: 3,
-      gridW: 9,
-      gridH: 10,
-      settings: {}
+      gridX: 33,
+      gridY: 11,
+      gridW: 14,
+      gridH: 11,
+      settings: {
+        opacity: 0
+      }
     },
     {
       id: 'widget_todo_default',
       type: 'todo',
-      gridX: 36,
-      gridY: 3,
-      gridW: 9,
-      gridH: 10,
+      gridX: 2,
+      gridY: 8,
+      gridW: 12,
+      gridH: 13,
       settings: {
         todos: [
           { id: 1, text: '拡張機能を使ってみる', completed: false },
           { id: 2, text: '左のドロワーからウィジェットを追加する', completed: false },
           { id: 3, text: '設定からお気に入りの動画壁紙を設定する', completed: false }
-        ]
+        ],
+        filter: 'all',
+        opacity: 15
+      }
+    },
+    {
+      id: 'widget_rss_default_1',
+      type: 'rss',
+      gridX: 15,
+      gridY: 0,
+      gridW: 32,
+      gridH: 3,
+      settings: {
+        opacity: 0,
+        tickerSpeed: 1,
+        rssUrls: [
+          'https://www.gizmodo.jp/feed/index.xml'
+        ],
+        rssUrl: 'https://www.gizmodo.jp/feed/index.xml'
+      }
+    },
+    {
+      id: 'widget_rss_default_2',
+      type: 'rss',
+      gridX: 35,
+      gridY: 3,
+      gridW: 12,
+      gridH: 7,
+      settings: {
+        opacity: 10
       }
     }
   ]
