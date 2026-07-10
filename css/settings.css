@@ -487,3 +487,89 @@ select option {
 .settings-btn:active {
   transform: translateY(0);
 }
+
+/* 設定のバックアップと復元用スタイル */
+.settings-action-row {
+  display: flex;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.icon-text-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 12px;
+  font-weight: 500;
+}
+
+.btn-svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* 危険な操作用のボタン (リセット用) */
+.settings-btn.btn-danger {
+  background: linear-gradient(135deg, #ef4444 0%, #b91c1c 100%);
+  box-shadow: 0 2px 8px rgba(239, 68, 68, 0.3);
+}
+
+.settings-btn.btn-danger:hover {
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.5);
+}
+
+.dialog-danger-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #f87171;
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.title-warning-icon {
+  width: 20px;
+  height: 20px;
+  color: #ef4444;
+}
+
+.dialog-description {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 16px;
+}
+
+.settings-input.full-width {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.btn-danger-execute {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  border: none;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-family: var(--font-sans);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.2);
+  transition: var(--transition-smooth);
+}
+
+.btn-danger-execute:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 15px rgba(239, 68, 68, 0.4);
+}
+
+.btn-danger-execute:disabled {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+  box-shadow: none;
+}

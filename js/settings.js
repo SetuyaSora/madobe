@@ -2,7 +2,7 @@
  * Chrome Wallpaper - Settings Controller Module
  * ------------------------------------------------------------- */
 
-import { appState, elements, GRID_COLS, GRID_ROWS } from './state.js';
+import { appState, elements, GRID_COLS, GRID_ROWS, DEFAULT_SETTINGS } from './state.js';
 import { storage, loadVideoBlob, saveVideoBlob, deleteVideoBlob } from './storage.js';
 import { renderShortcuts } from './shortcuts.js';
 import { renderWidgets, saveWidgets, initWidgetsTimer } from './widgets.js';
@@ -199,6 +199,103 @@ export function applyAllSettings() {
   initWidgetsTimer();
 }
 
+// 設定のエクスポート (JSONダウンロード)
+function exportSettings() {
+  const settingsCopy = { ...appState.currentSettings };
+  const dataStr = JSON.stringify(settingsCopy, null, 2);
+  const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
+  const exportFileDefaultName = 'chrome-wallpaper-settings.json';
+  
+  const linkElement = document.createElement('a');
+  linkElement.setAttribute('href', dataUri);
+  linkElement.setAttribute('download', exportFileDefaultName);
+  linkElement.click();
+}
+
+// 設定のインポート
+function importSettings(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    try {
+      const parsed = JSON.parse(event.target.result);
+      if (!parsed || typeof parsed !== 'object') {
+        throw new Error('Invalid JSON structure');
+      }
+
+      const newSettings = { ...appState.currentSettings };
+      const keysToImport = [
+        'bgType', 'bgUrl', 'volume', 'speed', 'overlayOpacity',
+        'fontFamily', 'customFontName', 'gridVersion', 'shortcuts', 'widgets'
+      ];
+      
+      keysToImport.forEach(key => {
+        if (parsed[key] !== undefined) {
+          newSettings[key] = parsed[key];
+        }
+      });
+
+      const isFileWarningNeeded = (newSettings.bgType === 'file');
+
+      storage.set(newSettings, () => {
+        appState.currentSettings = newSettings;
+        applyAllSettings();
+        
+        if (isFileWarningNeeded) {
+          alert('設定をインポートしました！\n※壁紙ソースが「ローカルファイル」に設定されているため、動画を再生するには設定画面から動画ファイルを再度選択してください。');
+        } else {
+          alert('設定をインポートしました！');
+        }
+        if (elements.importFileInput) {
+          elements.importFileInput.value = '';
+        }
+      });
+    } catch (err) {
+      console.error(err);
+      alert('設定ファイルのインポートに失敗しました。ファイルが壊れている可能性があります。');
+      if (elements.importFileInput) {
+        elements.importFileInput.value = '';
+      }
+    }
+  };
+  reader.readAsText(file);
+}
+
+// 設定初期化ダイアログの表示
+function showResetDialog() {
+  if (!elements.resetDialog || !elements.resetConfirmInput || !elements.resetExecuteBtn) return;
+  elements.resetConfirmInput.value = '';
+  elements.resetExecuteBtn.disabled = true;
+  elements.resetDialog.classList.remove('hidden');
+  elements.resetConfirmInput.focus();
+}
+
+function handleResetInput(e) {
+  if (!elements.resetExecuteBtn) return;
+  const val = e.target.value.trim();
+  elements.resetExecuteBtn.disabled = (val !== 'リセット');
+}
+
+function closeResetDialog() {
+  if (elements.resetDialog) {
+    elements.resetDialog.classList.add('hidden');
+  }
+}
+
+function executeReset() {
+  deleteVideoBlob().catch(err => console.error(err));
+  const defaultCopy = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
+  
+  storage.set(defaultCopy, () => {
+    appState.currentSettings = defaultCopy;
+    applyAllSettings();
+    closeResetDialog();
+    alert('設定を初期状態にリセットしました。');
+  });
+}
+
 // 設定変更関連イベントリスナーの初期化
 export function initSettings() {
   // Visibility API による省電力・軽量化 (最重要)
@@ -390,5 +487,48 @@ export function initSettings() {
         handleCustomFontApply();
       }
     });
+  }
+
+  // 設定のエクスポート
+  if (elements.exportBtn) {
+    elements.exportBtn.addEventListener('click', exportSettings);
+  }
+
+  // 設定のインポートトリガー
+  if (elements.importBtnTrigger) {
+    elements.importBtnTrigger.addEventListener('click', () => {
+      if (elements.importFileInput) {
+        elements.importFileInput.click();
+      }
+    });
+  }
+
+  // インポート実行
+  if (elements.importFileInput) {
+    elements.importFileInput.addEventListener('change', importSettings);
+  }
+
+  // 初期化（リセット）ダイアログ開閉
+  if (elements.resetBtn) {
+    elements.resetBtn.addEventListener('click', showResetDialog);
+  }
+
+  if (elements.resetCancelBtn) {
+    elements.resetCancelBtn.addEventListener('click', closeResetDialog);
+  }
+
+  if (elements.resetConfirmInput) {
+    elements.resetConfirmInput.addEventListener('input', handleResetInput);
+    
+    // Enterキーで初期化実行（リセットと正しく入力されている場合のみ）
+    elements.resetConfirmInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !elements.resetExecuteBtn.disabled) {
+        executeReset();
+      }
+    });
+  }
+
+  if (elements.resetExecuteBtn) {
+    elements.resetExecuteBtn.addEventListener('click', executeReset);
   }
 }

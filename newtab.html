@@ -224,6 +224,28 @@
         </div>
       </div>
 
+      <!-- 設定のバックアップと復元 -->
+      <div class="settings-group">
+        <label class="group-title">設定のバックアップと復元</label>
+        <div class="settings-action-row">
+          <button id="export-settings-btn" class="settings-btn icon-text-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>エクスポート</span>
+          </button>
+          <button id="import-settings-btn-trigger" class="settings-btn icon-text-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <span>インポート</span>
+          </button>
+          <input type="file" id="import-settings-file-input" accept=".json" class="hidden">
+        </div>
+        <div class="settings-action-row">
+          <button id="reset-settings-btn" class="settings-btn btn-danger icon-text-btn">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="btn-svg"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+            <span>設定を初期化</span>
+          </button>
+        </div>
+      </div>
+
       <!-- UI表示/非表示トグル（不要のため削除） -->
     </div>
   </div>
@@ -243,6 +265,27 @@
       <div class="dialog-actions">
         <button id="dialog-cancel-btn" class="text-button-secondary">キャンセル</button>
         <button id="dialog-save-btn" class="text-button">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 設定初期化確認用ダイアログ -->
+  <div id="reset-confirm-dialog" class="dialog-overlay hidden">
+    <div class="dialog-box">
+      <h3 class="dialog-danger-title">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="title-warning-icon"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+        設定を初期化しますか？
+      </h3>
+      <p class="dialog-description">
+        すべてのウィジェット配置、登録済みのショートカット、各種設定が初期状態に戻ります。IndexedDB内のローカル動画も削除されます。<br>
+        よろしければ、確認のために下に <strong>リセット</strong> と入力してください。
+      </p>
+      <div class="dialog-input-group">
+        <input type="text" id="reset-confirm-input" placeholder="リセット" autocomplete="off" class="settings-input full-width">
+      </div>
+      <div class="dialog-actions">
+        <button id="reset-cancel-btn" class="text-button-secondary">キャンセル</button>
+        <button id="reset-execute-btn" class="text-button btn-danger-execute" disabled>初期化を実行</button>
       </div>
     </div>
   </div>

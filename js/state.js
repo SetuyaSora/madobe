@@ -155,7 +155,17 @@ export const elements = {
   // 動的バインド用（検索バーなど）
   searchForm: null,
   searchInput: null,
-  suggestList: null
+  suggestList: null,
+
+  // バックアップ & リセット
+  exportBtn: null,
+  importBtnTrigger: null,
+  importFileInput: null,
+  resetBtn: null,
+  resetDialog: null,
+  resetConfirmInput: null,
+  resetCancelBtn: null,
+  resetExecuteBtn: null
 };
 
 // DOM構築完了後に要素を一括キャッシュ
@@ -211,6 +221,16 @@ export function initElements() {
   elements.tabWidgetsBtn = document.getElementById('tab-widgets-btn');
   elements.tabShortcutsContent = document.getElementById('tab-shortcuts-content');
   elements.tabWidgetsContent = document.getElementById('tab-widgets-content');
+
+  // バックアップ & リセット
+  elements.exportBtn = document.getElementById('export-settings-btn');
+  elements.importBtnTrigger = document.getElementById('import-settings-btn-trigger');
+  elements.importFileInput = document.getElementById('import-settings-file-input');
+  elements.resetBtn = document.getElementById('reset-settings-btn');
+  elements.resetDialog = document.getElementById('reset-confirm-dialog');
+  elements.resetConfirmInput = document.getElementById('reset-confirm-input');
+  elements.resetCancelBtn = document.getElementById('reset-cancel-btn');
+  elements.resetExecuteBtn = document.getElementById('reset-execute-btn');
 }
 
 // ヘルパー: HTMLエスケープ
