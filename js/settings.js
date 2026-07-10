@@ -405,6 +405,14 @@ export function initSettings() {
     elements.videoFileInput.addEventListener('change', (e) => {
       const file = e.target.files[0];
       if (file) {
+        // 30MB制限 (30 * 1024 * 1024 バイト)
+        const MAX_FILE_SIZE = 30 * 1024 * 1024;
+        if (file.size > MAX_FILE_SIZE) {
+          alert("選択した動画ファイルが大きすぎます。30MB以下の動画ファイルを選択してください。");
+          e.target.value = ""; // 入力をクリア
+          return;
+        }
+
         saveVideoBlob(file).then(() => {
           appState.currentSettings.bgType = 'file';
           storage.set({ bgType: 'file' }, () => {
