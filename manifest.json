@@ -1,8 +1,9 @@
 {
   "manifest_version": 3,
-  "name": "Chrome Wallpaper",
+  "name": "__MSG_extName__",
   "version": "1.0.0",
-  "description": "新規タブの背景に軽量な動画を設定し、ループ再生できる拡張機能です。省電力・軽量設計。",
+  "description": "__MSG_extDesc__",
+  "default_locale": "ja",
   "icons": {
     "16": "assets/icon16.png",
     "48": "assets/icon48.png",

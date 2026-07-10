@@ -1,0 +1,10 @@
+{
+  "extName": {
+    "message": "窓辺 (Madobe) - 動画背景とウィジェットの軽量新規タブ",
+    "description": "The name of the extension in Japanese."
+  },
+  "extDesc": {
+    "message": "新規タブの背景に軽量な動画を設定し、デスクトップのようにウィジェットを配置できる省電力・軽量設計の拡張機能。",
+    "description": "The description of the extension in Japanese."
+  }
+}

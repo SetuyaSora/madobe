@@ -215,7 +215,7 @@ function exportSettings() {
   const settingsCopy = { ...appState.currentSettings };
   const dataStr = JSON.stringify(settingsCopy, null, 2);
   const dataUri = 'data:application/json;charset=utf-8,' + encodeURIComponent(dataStr);
-  const exportFileDefaultName = 'chrome-wallpaper-settings.json';
+  const exportFileDefaultName = 'madobe-settings.json';
   
   const linkElement = document.createElement('a');
   linkElement.setAttribute('href', dataUri);

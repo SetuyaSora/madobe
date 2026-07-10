@@ -7,7 +7,7 @@ def main():
     # パス設定
     src_dir = os.path.dirname(os.path.abspath(__file__))
     dist_dir = os.path.join(src_dir, 'dist')
-    zip_path = os.path.join(dist_dir, 'chrome-wallpaper.zip')
+    zip_path = os.path.join(dist_dir, 'madobe.zip')
     
     # distフォルダのクリーンアップ・作成
     if os.path.exists(dist_dir):
@@ -21,10 +21,11 @@ def main():
         'newtab.js',
         'assets',
         'css',
-        'js'
+        'js',
+        '_locales'
     ]
     
-    print("Building chrome-wallpaper.zip...")
+    print("Building madobe.zip...")
     with zipfile.ZipFile(zip_path, 'w', zipfile.ZIP_DEFLATED) as zip_file:
         for item in includes:
             item_path = os.path.join(src_dir, item)
