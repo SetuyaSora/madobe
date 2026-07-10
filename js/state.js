@@ -23,13 +23,46 @@ export const DEFAULT_SETTINGS = {
   shortcuts: DEFAULT_SHORTCUTS,
   widgets: [
     {
+      id: 'widget_digital_clock_default',
+      type: 'digital-clock',
+      gridX: 18,
+      gridY: 3,
+      gridW: 12,
+      gridH: 3,
+      settings: {}
+    },
+    {
       id: 'widget_search_default',
       type: 'search-bar',
       gridX: 14,
-      gridY: 8,
+      gridY: 7,
       gridW: 20,
       gridH: 2,
       settings: {}
+    },
+    {
+      id: 'widget_calendar_default',
+      type: 'calendar',
+      gridX: 3,
+      gridY: 3,
+      gridW: 9,
+      gridH: 10,
+      settings: {}
+    },
+    {
+      id: 'widget_todo_default',
+      type: 'todo',
+      gridX: 36,
+      gridY: 3,
+      gridW: 9,
+      gridH: 10,
+      settings: {
+        todos: [
+          { id: 1, text: '拡張機能を使ってみる', completed: false },
+          { id: 2, text: '左のドロワーからウィジェットを追加する', completed: false },
+          { id: 3, text: '設定からお気に入りの動画壁紙を設定する', completed: false }
+        ]
+      }
     }
   ]
 };

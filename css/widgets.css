@@ -68,17 +68,33 @@ body.edit-mode .widget-frame.resizing {
 
 /* ウィジェットヘッダー (ドラッグハンドル) */
 .widget-header {
-  display: none !important; /* 通常モード時は完全に非表示 */
-}
-
-body.edit-mode .widget-header {
-  display: flex !important; /* 編集モード時のみ出現 */
+  display: flex !important;
   align-items: center;
   justify-content: space-between;
   padding: 6px 12px;
+  background: transparent;
+  border-bottom: 1px solid transparent;
+  cursor: default;
+  opacity: 0; /* 通常モード時は非表示 (スペースは確保) */
+  pointer-events: none; /* 通常モード時はクリックやドラッグ不可 */
+  transition: opacity 0.25s ease, background 0.25s ease, border-color 0.25s ease;
+}
+
+/* 編集モード時のウィジェットヘッダー可視化 */
+body.edit-mode .widget-header {
+  opacity: 1;
+  pointer-events: auto;
   background: rgba(0, 0, 0, 0.2);
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   cursor: move;
+}
+
+/* 検索バーは極薄（縦1マス）のため、通常時はヘッダースペースを確保せず完全非表示にする */
+.widget-type-search-bar .widget-header {
+  display: none !important;
+}
+body.edit-mode .widget-type-search-bar .widget-header {
+  display: flex !important;
 }
 
 .widget-title {
