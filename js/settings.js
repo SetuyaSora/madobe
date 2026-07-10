@@ -79,14 +79,19 @@ export function setVideoSource(url) {
     elements.video.src = url;
     elements.video.load();
     
-    elements.video.playbackRate = parseFloat(appState.currentSettings.speed);
+    const speed = parseFloat(appState.currentSettings.speed);
     const vol = appState.currentSettings.volume / 100;
     elements.video.volume = vol;
     elements.video.muted = (vol === 0);
 
-    elements.video.play().catch(err => {
-      console.warn("動画の自動再生がブロックされました。ユーザー操作を待ちます。", err);
-    });
+    if (speed === 0) {
+      elements.video.pause();
+    } else {
+      elements.video.playbackRate = speed;
+      elements.video.play().catch(err => {
+        console.warn("動画の自動再生がブロックされました。ユーザー操作を待ちます。", err);
+      });
+    }
   }
 }
 
@@ -139,8 +144,14 @@ export function applyAllSettings() {
   }
 
   // 3. 再生速度適用
+  const speedVal = parseFloat(appState.currentSettings.speed);
   if (elements.video) {
-    elements.video.playbackRate = parseFloat(appState.currentSettings.speed);
+    if (speedVal === 0) {
+      elements.video.pause();
+    } else {
+      elements.video.playbackRate = speedVal;
+      elements.video.play().catch(e => console.log(e));
+    }
   }
   if (elements.speedSelect) {
     elements.speedSelect.value = appState.currentSettings.speed;
@@ -305,9 +316,15 @@ export function initSettings() {
       elements.video.pause();
       console.log('Tab backgrounded: Video paused for performance.');
     } else {
-      elements.video.playbackRate = parseFloat(appState.currentSettings.speed);
-      elements.video.play().catch(e => console.log('Playback resume failed:', e));
-      console.log('Tab foregrounded: Video resumed.');
+      const speed = parseFloat(appState.currentSettings.speed);
+      if (speed > 0) {
+        elements.video.playbackRate = speed;
+        elements.video.play().catch(e => console.log('Playback resume failed:', e));
+        console.log('Tab foregrounded: Video resumed.');
+      } else {
+        elements.video.pause();
+        console.log('Tab foregrounded: Video remains paused as speed is 0.');
+      }
     }
   });
 
@@ -442,7 +459,12 @@ export function initSettings() {
       const speed = parseFloat(e.target.value);
       appState.currentSettings.speed = speed;
       if (elements.video) {
-        elements.video.playbackRate = speed;
+        if (speed === 0) {
+          elements.video.pause();
+        } else {
+          elements.video.playbackRate = speed;
+          elements.video.play().catch(err => console.log(err));
+        }
       }
       storage.set({ speed: speed });
     });
